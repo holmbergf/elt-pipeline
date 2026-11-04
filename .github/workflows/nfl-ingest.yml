@@ -30,7 +30,8 @@ jobs:
       - name: Install ingestion + dbt
         run: |
           pip install "./data-integration[iceberg]" dbt-duckdb duckdb
-          playwright install --with-deps chromium
+          # No browser needed: games=nflverse CSV, spreads/totals=Covers HTTP.
+          # Playwright (.[browser]) is only for the legacy PFR source (GAMES_SOURCE=pfr).
       - name: Run ingestion (games -> spreads -> totals)
         env:
           STORAGE_BACKEND: r2
