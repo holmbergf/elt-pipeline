@@ -1,0 +1,24 @@
+dbt_transform:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: dev.duckdb
+      threads: 4
+      extensions:
+        - httpfs
+        - iceberg
+    prod:
+      type: duckdb
+      path: warehouse.duckdb
+      threads: 4
+      extensions:
+        - httpfs
+        - iceberg
+      secrets:
+        - type: s3
+          name: r2
+          key_id: "{{ env_var('R2_ACCESS_KEY_ID', '') }}"
+          secret: "{{ env_var('R2_SECRET_ACCESS_KEY', '') }}"
+          endpoint: "{{ env_var('R2_S3_HOST', '') }}"
+          region: auto

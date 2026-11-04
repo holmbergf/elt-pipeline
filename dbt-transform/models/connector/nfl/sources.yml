@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: basin
+    description: "Raw NFL Iceberg tables in Basin Catalog on R2 bucket `nfl` (ingestion/ zone), written by elt-ingest. Bronze models read them via the raw_table() macro (partitioned Parquet raw zone by default)."
+    config:
+      loaded_at_field: timestamp_imported
+      freshness: {warn_after: {count: 8, period: day}, error_after: {count: 15, period: day}}
+    tables:
+      - name: raw_nfl_games
+        description: "NFL games from nflverse (PFR-shaped)."
+      - name: raw_nfl_spreads
+        description: "NFL betting spreads and consensus from Covers.com."
+      - name: raw_nfl_totals
+        description: "NFL betting totals and consensus from Covers.com."

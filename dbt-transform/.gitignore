@@ -1,0 +1,11 @@
+
+target/
+dbt_packages/
+logs/
+
+# Local databases
+*.duckdb
+*.duckdb.wal
+*.duckdb.tmp
+
+dbt_internal_packages/

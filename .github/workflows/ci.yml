@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python-and-dbt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: pip install "./data-integration[dev,iceberg]" dbt-duckdb
+      - name: Ingestion tests
+        run: python -m pytest data-integration/tests -q
+      - name: dbt parse
+        working-directory: dbt-transform
+        run: dbt parse --profiles-dir .
+
+  terraform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: Validate (no backend, no apply in CI)
+        working-directory: infra
+        run: |
+          terraform fmt -check
+          terraform init -backend=false -input=false
+          terraform validate

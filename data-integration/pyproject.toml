@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "elt-ingest"
+version = "0.1.0"
+description = "NFL ingestion for elt-pipeline: scrape PFR/Covers, land Parquet in R2, register Basin Catalog Iceberg tables"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.0",
+    "pyarrow>=14",
+    "boto3>=1.34",
+    "requests>=2.31",
+    "beautifulsoup4>=4.12",
+    "lxml>=4.9",
+    "python-dotenv>=1.0",
+    "tenacity>=8.2",
+]
+
+[project.optional-dependencies]
+iceberg = ["pyiceberg>=0.7"]
+browser = ["playwright>=1.40"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+elt-ingest = "elt_ingest.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/elt_ingest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

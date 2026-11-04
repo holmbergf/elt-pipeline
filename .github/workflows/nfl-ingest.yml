@@ -1,0 +1,64 @@
+name: nfl-ingest
+
+on:
+  schedule:
+    - cron: "17 11 * * 2" # Tue 11:17 UTC, after Mon-night games settle
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [incremental, backfill]
+        default: incremental
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nfl-ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install ingestion + dbt
+        run: |
+          pip install "./data-integration[iceberg]" dbt-duckdb duckdb
+          playwright install --with-deps chromium
+      - name: Run ingestion (games -> spreads -> totals)
+        env:
+          STORAGE_BACKEND: r2
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: nfl
+          BASIN_CATALOG_URI: ${{ secrets.BASIN_CATALOG_URI }}
+          BASIN_WAREHOUSE: ${{ secrets.BASIN_WAREHOUSE }}
+          BASIN_TOKEN: ${{ secrets.BASIN_TOKEN }}
+        run: elt-ingest all --mode "${{ inputs.mode || 'incremental' }}"
+      - name: dbt build (prod) and publish warehouse tables
+        working-directory: dbt-transform
+        env:
+          RAW_BASE_PATH: s3://nfl/ingestion
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_S3_HOST: ${{ secrets.R2_S3_HOST }}
+          BASIN_CATALOG_URI: ${{ secrets.BASIN_CATALOG_URI }}
+          BASIN_WAREHOUSE: ${{ secrets.BASIN_WAREHOUSE }}
+          BASIN_TOKEN: ${{ secrets.BASIN_TOKEN }}
+        run: |
+          dbt seed --target prod --profiles-dir .
+          dbt build --target prod --profiles-dir .
+          python -m elt_ingest.publish_warehouse warehouse.duckdb
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dbt-run-results
+          path: dbt-transform/target/run_results.json
+          if-no-files-found: ignore

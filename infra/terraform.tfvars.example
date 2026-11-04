@@ -1,0 +1,11 @@
+# Cloudflare Account ID (find this in the Cloudflare dashboard URL or on the right sidebar of Workers & Pages / Overview)
+cloudflare_account_id = "your-cloudflare-account-id"
+
+# API Token (recommended to set as environment variable `export CLOUDFLARE_API_TOKEN="..."` instead of in this file)
+# cloudflare_api_token = "your-api-token"
+
+# Warehouse bucket name (R2 naming: lowercase letters, numbers, hyphens).
+warehouse_bucket_name = "nfl"
+
+# Optional location hint: 'wnam' (Western North America), 'enam' (Eastern North America), 'weur' (Western Europe), etc.
+# r2_bucket_location = "enam"

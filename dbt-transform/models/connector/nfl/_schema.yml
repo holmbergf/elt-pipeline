@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: stg_nfl_games
+    columns:
+      - name: game_date
+        tests: [not_null]
+      - name: season
+        tests: [not_null]
+  - name: fct_nfl_games
+    columns:
+      - name: game_id
+        tests: [unique, not_null]
+      - name: home_team_id
+        tests:
+          - relationships:
+              arguments: {to: "ref('dim_nfl_teams')", field: team_id}
+      - name: game_date
+        tests: [not_null]
+  - name: dim_nfl_teams
+    columns:
+      - name: team_id
+        tests: [unique, not_null]
+  - name: dim_nfl_date
+    columns:
+      - name: date_id
+        tests: [unique, not_null]
+  - name: fct_nfl_betting_settled
+    columns:
+      - name: game_id
+        tests: [not_null]
+  - name: fct_nfl_betting_upcoming
+    columns:
+      - name: game_id
+        tests: [not_null]
