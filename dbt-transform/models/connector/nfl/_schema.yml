@@ -46,7 +46,7 @@ models:
       - name: consensus_spread_accuracy
         description: "Share of market games where the betting consensus pick covered the spread."
   - name: semantic_upcoming_matchups
-    description: "Human surface: future fixtures with lines (null until posted) and team form. Negative spread = favored."
+    description: "Human surface: today's fixtures only, with lines (null until posted) and team form. Negative spread = favored. Full future schedule lives in silver fct_nfl_betting_upcoming."
     columns:
       - name: home_spread_points
         description: "Home spread in points; negative means the home team is favored."

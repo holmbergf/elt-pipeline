@@ -46,3 +46,6 @@ left join {{ ref('semantic_team_season_form') }} h
     on h.team_name = u.home_team and h.season = u.season
 left join {{ ref('semantic_team_season_form') }} a
     on a.team_name = u.away_team and a.season = u.season
+-- Today-only display surface. The full future schedule remains available in
+-- silver fct_nfl_betting_upcoming; this view answers "what's on today?"
+where u.game_date = current_date
