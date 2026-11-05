@@ -1,59 +1,107 @@
 # elt-pipeline
 
-Cloudflare-based ELT (Extract, Load, Transform) data pipeline for NFL data ingestion and analytics.
+Cloudflare-based ELT pipeline for NFL data: ingest games and betting markets,
+land them in R2, model them with dbt, and serve analytics from Apache Iceberg
+tables in Basin Catalog.
 
-## Architecture & Storage
+Production entry point is GitHub Actions — the pipeline runs autonomously on
+schedule (see [Autonomous operation](#autonomous-operation)).
 
-- **Object Storage**: Cloudflare R2 bucket (`nfl`) with `ingestion/` and `data_warehouse/` zones for the data lake and warehouse.
-- **Ingestion**: Python package in [`data-integration/`](data-integration/) — nflverse games + Covers spreads/totals, partitioned Parquet in R2, Basin Catalog Iceberg tables (`nfl.raw_nfl_*`). State lives in R2 run manifests. See [`.env.example`](.env.example).
-- **Infrastructure as Code**: Terraform configurations located in [`infra/`](infra/).
-- **Data Transformation**: dbt project located in [`dbt-transform/`](dbt-transform/) (powered by **dbt v2** `2.0.11` with built-in DuckDB engine).
+## Architecture
 
-## Project Structure
+```text
+nflverse (games CSV) ─┐
+Covers (spreads,      ├─ elt-ingest ─► R2 bucket `nfl`
+         totals)      ┘   (Python)     ├─ ingestion/raw/nfl/…   partitioned Parquet
+                                       ├─ ingestion/_manifests/…  run state / watermarks
+                                       └─ Iceberg nfl.raw_nfl_*   (Basin Catalog)
+                                              │
+                        dbt (DuckDB) ─────────┤ bronze views (1:1 casts)
+                                              ├─ silver: clean staging, dims, facts
+                                              └─ gold: analytics marts
+                                                     │
+                        publish_warehouse ─► Iceberg silver.* / gold.*
+                                           + data_warehouse/{silver,gold}/*.parquet
+```
+
+- **Ingestion** ([`data-integration/`](data-integration/)): games from
+  [nflverse](data-integration/src/elt_ingest/nflverse.py) (one CSV download,
+  no scraping), spreads/totals scraped from Covers. Writes are content-addressed
+  and idempotent — re-runs write zero new objects. State (watermarks,
+  missing-date detection) lives in R2 run manifests, not a database.
+- **Warehouse** ([`dbt-transform/`](dbt-transform/)): 15 dbt models —
+  bronze views over raw, silver staging/core (dims, facts, betting), gold
+  analytics — with schema tests, source freshness, and singular data tests.
+  dbt builds in DuckDB; silver/gold are published to Basin Catalog Iceberg
+  tables via PyIceberg (DuckDB cannot `CREATE OR REPLACE` Iceberg tables —
+  see [dbt-transform/README.md](dbt-transform/README.md) for the write-path
+  decision) and exported as Parquet under `data_warehouse/`.
+- **Infrastructure** ([`infra/`](infra/)): Terraform provisions the R2 bucket
+  `nfl` and its Basin Catalog (`cloudflare_r2_data_catalog`). Nothing is
+  provisioned by hand or by Wrangler.
+
+## Repository structure
 
 ```text
 elt-pipeline/
-├── infra/                  # Terraform infrastructure definitions
-│   ├── main.tf             # Cloudflare resources (R2 buckets, etc.)
-│   ├── variables.tf        # Input variable declarations
-│   ├── outputs.tf          # Resource outputs
-│   ├── versions.tf         # Terraform and provider constraints
-│   ├── terraform.tfvars.example # Template for variable overrides
-│   └── README.md           # Infrastructure documentation
-├── dbt-transform/          # dbt transformation project
-│   ├── dbt_project.yml     # Project configuration (enforces dbt >=2.0.0)
-│   ├── profiles.yml        # Local profile config (DuckDB adapter)
-│   ├── models/             # SQL models and schemas
-│   │   └── connector/nfl/  # NFL domain models
-│   │       ├── sources.yml # Raw source definitions
-│   │       ├── bronze/     # Raw extraction staging views
-│   │       ├── silver/     # Cleaned dimensions, facts & staging
-│   │       └── gold/       # Analytical marts and KPIs
-│   ├── seeds/              # CSV seed data (nfl_team_mappings.csv)
-│   ├── analyses/           # Ad-hoc analytical queries
-│   ├── macros/             # Jinja macros
-│   ├── snapshots/          # Point-in-time snapshots
-│   └── tests/              # Custom data tests
-├── .cursor/mcp.json        # MCP server configuration for Cursor
-├── .vscode/mcp.json        # MCP server configuration for VS Code
-├── .gitignore              # Git ignore rules (secrets, state, logs)
-└── README.md
+├── data-integration/       # Ingestion package (elt-ingest CLI)
+│   ├── src/elt_ingest/     # nflverse, Covers scrapers, storage, Iceberg, jobs
+│   ├── tests/              # pytest (mocked sources, offline)
+│   └── Dockerfile          # Stateless runner image
+├── dbt-transform/          # dbt warehouse (DuckDB)
+│   ├── models/connector/nfl/{bronze,silver,gold}/
+│   └── tests/fixtures/     # 10-row mock raw samples for CI
+├── infra/                  # Terraform: R2 bucket `nfl` + Basin Catalog
+└── .github/workflows/      # Autonomous ingest + per-module CI
 ```
 
-## Autonomous operation (GitHub Actions)
+## Autonomous operation
 
-- `.github/workflows/nfl-ingest.yml` runs every Tuesday 11:17 UTC (and on
-  manual dispatch): `elt-ingest all` → `dbt build --target prod` → publish
-  silver/gold Iceberg tables. It is the production entry point.
-- Module CI (path-filtered, independent): `ci/data-integration`
-  (`.github/workflows/data-integration.yml`), `ci/dbt` (slim build on
-  10-row mock raw fixtures, `.github/workflows/dbt.yml`), `ci/infra`
-  (Terraform validate + branch-deploy IssueOps, `.github/workflows/infra.yml`).
-- Terraform is applied manually from `infra/`; state stays local and is
-  git-ignored. Do not add `terraform apply` to CI without first moving state
-  to a remote backend.
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `nfl-ingest` | Sun 07:00, Mon 13:00, Thu 13:00 UTC + manual | `elt-ingest all` → `dbt build --target prod` → publish warehouse tables; ahead of game days |
+| `ci/data-integration` | Changes under `data-integration/**` | pytest, byte-compile, CLI smoke |
+| `ci/dbt` | Changes under `dbt-transform/**` | Slim dbt build (`state:modified+` vs prod manifest) + data tests on 10-row mock fixtures |
+| `ci/infra` | Changes under `infra/**`, PR comments | fmt/validate; `.deploy` / `.deploy noop` IssueOps via branch-deploy |
 
-### Required GitHub Secrets
+Workflows are path-filtered and independent: a dbt-only change runs only
+`ci/dbt`, etc.
+
+Terraform applies happen via the branch-deploy flow (`.deploy` on a PR,
+production environment). **Prerequisite:** the repo variable
+`TF_STATE_BACKEND_CONFIG` must point at a remote backend — state is
+currently local-only, and the deploy job deliberately refuses to apply
+against an empty runner-local state until that is configured.
+
+## Local development
+
+Prerequisites: Python 3.11, Terraform ≥ 1.5 (infra only).
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e "./data-integration[iceberg,dev]" dbt-duckdb duckdb
+cp .env.example .env   # fill in values, never commit .env
+```
+
+```bash
+# Ingest (local storage backend when R2 keys are absent)
+elt-ingest games
+elt-ingest all --mode backfill --start-year 2015
+
+# Warehouse
+cd dbt-transform
+dbt build --profiles-dir .                      # dev: local DuckDB over data/raw/ingestion
+RAW_BASE_PATH=s3://nfl/ingestion dbt build --target prod --profiles-dir .
+python -m elt_ingest.publish_warehouse warehouse.duckdb
+
+# Tests
+python -m pytest data-integration/tests -q
+```
+
+## Configuration
+
+Local runs use `.env`; GitHub Actions uses repository secrets — the variable
+names are identical. See [`.env.example`](.env.example) for the full list.
 
 | Secret | Source |
 |---|---|
@@ -62,7 +110,14 @@ elt-pipeline/
 | `R2_S3_HOST` | `<account-id>.r2.cloudflarestorage.com` |
 | `BASIN_CATALOG_URI` / `BASIN_WAREHOUSE` | `terraform -chdir=infra output` |
 | `BASIN_TOKEN` | R2 API token value (catalog permission) |
-| `CLOUDFLARE_API_TOKEN` | Only for manual Terraform runs, not used by workflows |
+| `CLOUDFLARE_API_TOKEN` | Terraform only (branch-deploy / manual runs) |
 
-Local development uses the same variable names via `.env` (see
-`.env.example`); `.env` is git-ignored and must never be committed.
+## Data notes
+
+- Games cover 1999–present from nflverse; warehouse history in production
+  starts at the 2015 season. Yards/turnovers are not in the nflverse
+  dataset and stay null (bronze-only columns; nothing downstream uses them).
+- Raw schemas are frozen contracts in `elt_ingest/iceberg.py`; a source
+  schema change fails bronze casts loudly instead of drifting.
+- Full-refresh dbt builds throughout; the switch to incremental merge on
+  `game_id` is planned when a full build exceeds ~10 minutes.
