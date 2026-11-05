@@ -43,6 +43,9 @@ MODELS: dict[str, tuple[str, str]] = {
     "analytics_nfl_team_betting_stats": ("gold", "analytics_nfl_team_betting_stats"),
     "analytics_nfl_team_rankings": ("gold", "analytics_nfl_team_rankings"),
     "analytics_nfl_upcoming_matchups": ("gold", "analytics_nfl_upcoming_matchups"),
+    "semantic_team_season_form": ("semantic", "semantic_team_season_form"),
+    "semantic_game_results": ("semantic", "semantic_game_results"),
+    "semantic_upcoming_matchups": ("semantic", "semantic_upcoming_matchups"),
 }
 
 
@@ -61,8 +64,9 @@ def publish(db_path: Path, settings: Settings | None = None) -> dict[str, int]:
         ident = (layer, table_name)
         catalog.create_namespace_if_not_exists(layer)
         if catalog.table_exists(ident):
-            existing = {f.name for f in catalog.load_table(ident).schema().fields}
-            if existing != set(arrow.column_names):
+            existing = {f.name: str(f.field_type) for f in catalog.load_table(ident).schema().fields}
+            new = {n: str(arrow.field(n).type) for n in arrow.column_names}
+            if existing != new:
                 # Publisher is a full overwrite; recreate on schema change.
                 catalog.drop_table(ident)
         if not catalog.table_exists(ident):

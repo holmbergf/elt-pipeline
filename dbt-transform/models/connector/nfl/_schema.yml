@@ -33,3 +33,24 @@ models:
     columns:
       - name: game_id
         tests: [not_null]
+
+  - name: semantic_team_season_form
+    description: "Human surface: one row per team-season (season-to-date). Fractions are 0-1 rounded to 2 decimals."
+    columns:
+      - name: win_pct
+        description: "Win percentage as a fraction (0-1): (wins + 0.5*ties) / games_played."
+      - name: against_the_spread_win_pct
+        description: "Share of decided against-the-spread bets won (pushes count half), over games_with_market only."
+      - name: games_with_market
+        description: "Played games that have spread/totals market data; the denominator behind market rates."
+      - name: consensus_spread_accuracy
+        description: "Share of market games where the betting consensus pick covered the spread."
+  - name: semantic_upcoming_matchups
+    description: "Human surface: future fixtures with lines (null until posted) and team form. Negative spread = favored."
+    columns:
+      - name: home_spread_points
+        description: "Home spread in points; negative means the home team is favored."
+      - name: home_consensus_pct
+        description: "Share of consensus bets on the home team (0-1 fraction)."
+  - name: semantic_game_results
+    description: "Human surface: one row per played game with result and market outcome."

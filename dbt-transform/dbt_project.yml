@@ -38,6 +38,8 @@ models:
           +materialized: table
         gold:
           +materialized: table
+        semantic:
+          +materialized: view
 
 vars:
   start_year: 2015

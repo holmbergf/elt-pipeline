@@ -112,6 +112,14 @@ select
     is_win,
     is_loss,
     is_tie,
+    is_ats_win,
+    is_ats_loss,
+    is_ats_push,
+    is_over,
+    is_under,
+    is_total_push,
+    was_consensus_spread_correct,
+    was_consensus_total_correct,
     
     -- Win/Loss Running
     round((running_wins + 0.5 * running_ties) / running_games_played, 3) as running_win_percentage,

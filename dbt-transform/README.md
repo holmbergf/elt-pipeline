@@ -10,6 +10,10 @@ Silver staging: clean_nfl_games / clean_nfl_spreads / clean_nfl_totals
            fct_nfl_betting_settled, fct_nfl_betting_upcoming, fct_nfl_team_performance
 Gold: analytics_nfl_team_rankings, analytics_nfl_team_betting_stats,
       analytics_nfl_upcoming_matchups
+Semantic (human surface, views): semantic_team_season_form,
+      semantic_game_results, semantic_upcoming_matchups — fractions 0-1
+      at 2dp, integer W/L/T, *_points spreads/lines. Streamlit should
+      read the `semantic` namespace, not gold.
 
 ## Storage layout (bucket `nfl`, provisioned by ../infra Terraform)
 
