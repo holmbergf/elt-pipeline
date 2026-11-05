@@ -5,7 +5,7 @@ set -euo pipefail
 DEST="${1:?usage: export_standalone.sh <destination-dir>}"
 mkdir -p "$DEST/.streamlit"
 cp dashboard/streamlit_app.py dashboard/data.py dashboard/requirements.txt "$DEST/"
-cp dashboard/.streamlit/secrets.toml.example "$DEST/.streamlit/"
+cp dashboard/.streamlit/secrets.toml.example dashboard/.streamlit/config.toml "$DEST/.streamlit/"
 cat > "$DEST/README.md" <<'MD'
 # NFL Matchup Board
 
