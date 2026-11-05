@@ -2,11 +2,13 @@ name: nfl-ingest
 
 on:
   schedule:
-    # Ahead of game days (all UTC): Sun 07:00 (pre-Sunday slate),
-    # Mon 13:00 (pre-Monday night), Thu 13:00 (pre-Thursday night)
-    - cron: "0 7 * * 0"
-    - cron: "0 13 * * 1"
-    - cron: "0 13 * * 4"
+    # Intended Pacific times, expressed in UTC (PT = UTC-8, standard time):
+    # Sun 07:00 PT (pre-Sunday slate), Mon 13:00 PT (pre-Monday night),
+    # Thu 13:00 PT (pre-Thursday night). GitHub cron is UTC-only, so during
+    # daylight time (PDT, UTC-7) these fire one hour later Pacific-local.
+    - cron: "0 15 * * 0"
+    - cron: "0 21 * * 1"
+    - cron: "0 21 * * 4"
   workflow_dispatch:
     inputs:
       mode:
