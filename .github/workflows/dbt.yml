@@ -1,0 +1,58 @@
+name: ci/dbt
+
+on:
+  push:
+    branches: [main]
+    paths: ["dbt-transform/**", ".github/workflows/dbt.yml"]
+  pull_request:
+    paths: ["dbt-transform/**", ".github/workflows/dbt.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read # fetch prod manifest artifact for slim selection
+
+concurrency:
+  group: ci-dbt-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  slim-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dbt
+        run: pip install dbt-duckdb duckdb
+      # Slim CI: compare against the production manifest from the latest
+      # successful nfl-ingest run and build only modified models + parents/
+      # children, against 10-row mock raw fixtures (tests/fixtures/raw).
+      # Without a prod artifact (first run), fall back to a full fixture build.
+      - name: Fetch prod manifest (slim state)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p prod-state
+          run_id=$(gh run list --workflow nfl-ingest.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId' || true)
+          if [ -n "$run_id" ] && [ "$run_id" != "null" ]; then
+            gh run download "$run_id" --name dbt-state --dir prod-state || true
+          fi
+          ls prod-state || true
+      - name: dbt seed + build on mock raw fixtures
+        working-directory: dbt-transform
+        env:
+          RAW_BASE_PATH: ${{ github.workspace }}/dbt-transform/tests/fixtures/raw/ingestion
+        run: |
+          dbt seed --profiles-dir .
+          if [ -f ../prod-state/manifest.json ]; then
+            echo "Slim build: state:modified+ against prod manifest"
+            dbt build --profiles-dir . --select state:modified+ --state ../prod-state
+          else
+            echo "No prod manifest found; full build on fixtures"
+            dbt build --profiles-dir .
+          fi

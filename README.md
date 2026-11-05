@@ -45,8 +45,10 @@ elt-pipeline/
 - `.github/workflows/nfl-ingest.yml` runs every Tuesday 11:17 UTC (and on
   manual dispatch): `elt-ingest all` → `dbt build --target prod` → publish
   silver/gold Iceberg tables. It is the production entry point.
-- `.github/workflows/ci.yml` runs on push/PR: ingestion `pytest`, `dbt parse`,
-  and Terraform `fmt`/`validate` (never `apply`).
+- Module CI (path-filtered, independent): `ci/data-integration`
+  (`.github/workflows/data-integration.yml`), `ci/dbt` (slim build on
+  10-row mock raw fixtures, `.github/workflows/dbt.yml`), `ci/infra`
+  (Terraform validate + branch-deploy IssueOps, `.github/workflows/infra.yml`).
 - Terraform is applied manually from `infra/`; state stays local and is
   git-ignored. Do not add `terraform apply` to CI without first moving state
   to a remote backend.
