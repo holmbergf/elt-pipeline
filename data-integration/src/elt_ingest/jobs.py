@@ -57,8 +57,12 @@ async def run_games(
         current_season = datetime.now().year if datetime.now().month >= 9 else datetime.now().year - 1
         years = seasons or ([current_season] if max_date is None else sorted({current_season - 1, current_season}))
         df = normalise_games(await _scrape_games(years))
-        if max_date is not None:
-            df = df[df["date"] > max_date].reset_index(drop=True)
+        # No date filter: a strict > max_date permanently strands games that
+        # were first seen as scoreless previews on max_date itself (the Feb
+        # 2026 Super Bowl). Seasons are small and writes are content-addressed
+        # per season partition, so re-writing both seasons is idempotent when
+        # nothing changed and appends corrections when scores land. The
+        # warehouse dedupes raw versions to the scored one.
         result = write_dataset(storage, df, "games", source="incremental:nflverse")
     _maybe_iceberg(s, "games", df, result)
     return result

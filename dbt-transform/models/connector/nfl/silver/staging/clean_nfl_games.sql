@@ -21,6 +21,22 @@ mapped as (
     from base b
     left join {{ ref('nfl_team_mappings') }} h on b.home_team_raw = h.full_team_name
     left join {{ ref('nfl_team_mappings') }} a on b.away_team_raw = a.full_team_name
+),
+
+-- Raw is append-only: a game first seen as a scoreless preview can later
+-- arrive again with the result. Keep one row per game, preferring the
+-- scored (latest corrected) version.
+deduped as (
+    select
+        *,
+        row_number() over (
+            -- Unordered team pair: a preview row and its corrected version
+            -- can disagree on home/away (neutral-site games).
+            partition by game_date, least(home_team, away_team), greatest(home_team, away_team)
+            order by (home_score is not null) desc, timestamp_imported desc
+        ) as rn
+    from mapped
+    where home_team is not null and away_team is not null
 )
 
 select
@@ -43,7 +59,5 @@ select
         else 'Away'
     end as winning_team_loc,
     timestamp_imported
-from mapped
--- Only return games that we successfully mapped to a team
-where home_team is not null 
-  and away_team is not null
+from deduped
+where rn = 1

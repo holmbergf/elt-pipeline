@@ -151,7 +151,10 @@ def write_dataset(storage, df: pd.DataFrame, dataset: str, source: str) -> Write
     for partition, part in _partition_groups(df, dataset):
         buf = io.BytesIO()
         part.to_parquet(buf, index=False)
-        key = f"{storage.prefix}/raw/nfl/{dataset}/{partition}/part-{content_hash(part)}.parquet"
+        # Hash without the import timestamp: identical data re-fetched later
+        # must map to the same key (idempotent), not a new version per run.
+        hash_part = part.drop(columns=["timestamp_imported"], errors="ignore")
+        key = f"{storage.prefix}/raw/nfl/{dataset}/{partition}/part-{content_hash(hash_part)}.parquet"
         if storage.exists(key):
             result.skipped_keys.append(key)
             continue

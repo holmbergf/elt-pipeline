@@ -5,7 +5,10 @@
 
 with games as (
     select * from {{ ref('clean_nfl_games') }}
-    where home_score is null or away_score is null
+    -- Upcoming means future: a past-dated scoreless game is a stale preview
+    -- row, not a fixture. (Regression: Feb 2026 Super Bowl preview leaked in.)
+    where (home_score is null or away_score is null)
+      and game_date >= current_date
 ),
 
 spreads as (
