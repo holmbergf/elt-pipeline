@@ -49,6 +49,8 @@ MODELS: dict[str, tuple[str, str]] = {
     "semantic_upcoming_matchups": ("semantic", "semantic_upcoming_matchups"),
     "semantic_consensus_spread_bands": ("semantic", "semantic_consensus_spread_bands"),
     "semantic_consensus_total_bands": ("semantic", "semantic_consensus_total_bands"),
+    "semantic_spread_line_bands": ("semantic", "semantic_spread_line_bands"),
+    "semantic_total_line_bands": ("semantic", "semantic_total_line_bands"),
 }
 
 

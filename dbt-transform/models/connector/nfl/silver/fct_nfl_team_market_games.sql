@@ -21,7 +21,7 @@ team_games as (
             when spread_cover_winning_side = 'Away' then false
         end as covered_spread,
         home_team = winning_team_name as won_game,
-        over_consensus_pct,
+        over_consensus_pct, over_under_line,
         case when total_outcome = 'Over' then true when total_outcome = 'Under' then false end as over_hit
     from settled
     union all
@@ -35,7 +35,7 @@ team_games as (
             when spread_cover_winning_side = 'Home' then false
         end,
         away_team = winning_team_name,
-        over_consensus_pct,
+        over_consensus_pct, over_under_line,
         case when total_outcome = 'Over' then true when total_outcome = 'Under' then false end
     from settled
 )
@@ -69,5 +69,42 @@ select
     case
         when over_consensus_pct >= 0.5 then over_hit
         else case when over_hit is null then null else not over_hit end
-    end as totals_consensus_hit
+    end as totals_consensus_hit,
+    case
+        when team_spread_points < 0 then 'Favorite'
+        when team_spread_points > 0 then 'Underdog'
+        else 'Even'
+    end as spread_role,
+    case
+        when abs(team_spread_points) = 0 then 'Pick''em (0)'
+        when abs(team_spread_points) <= 2.5 then '0.5-2.5 pts'
+        when abs(team_spread_points) <= 6.5 then '3-6.5 pts'
+        when abs(team_spread_points) <= 9.5 then '7-9.5 pts'
+        when abs(team_spread_points) <= 13.5 then '10-13.5 pts'
+        else '14+ pts'
+    end as spread_line_bucket,
+    case
+        when abs(team_spread_points) = 0 then 0
+        when abs(team_spread_points) <= 2.5 then 1
+        when abs(team_spread_points) <= 6.5 then 2
+        when abs(team_spread_points) <= 9.5 then 3
+        when abs(team_spread_points) <= 13.5 then 4
+        else 5
+    end as spread_line_bucket_order,
+    case
+        when over_under_line < 40 then 'Under 40'
+        when over_under_line <= 43.5 then '40-43.5'
+        when over_under_line <= 47.5 then '44-47.5'
+        when over_under_line <= 51.5 then '48-51.5'
+        when over_under_line <= 55.5 then '52-55.5'
+        else '56+'
+    end as totals_line_bucket,
+    case
+        when over_under_line < 40 then 0
+        when over_under_line <= 43.5 then 1
+        when over_under_line <= 47.5 then 2
+        when over_under_line <= 51.5 then 3
+        when over_under_line <= 55.5 then 4
+        else 5
+    end as totals_line_bucket_order
 from team_games
