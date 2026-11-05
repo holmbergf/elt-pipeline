@@ -50,8 +50,8 @@ jobs:
         run: |
           dbt seed --profiles-dir .
           if [ -f ../prod-state/manifest.json ]; then
-            echo "Slim build: state:modified+ against prod manifest"
-            dbt build --profiles-dir . --select state:modified+ --state ../prod-state
+            echo "Slim build: +state:modified+ (modified + parents/children) against prod manifest"
+            dbt build --profiles-dir . --select +state:modified+ --state ../prod-state
           else
             echo "No prod manifest found; full build on fixtures"
             dbt build --profiles-dir .
