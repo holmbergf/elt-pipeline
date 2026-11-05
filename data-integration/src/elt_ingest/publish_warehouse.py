@@ -40,12 +40,15 @@ MODELS: dict[str, tuple[str, str]] = {
     "fct_nfl_betting_settled": ("silver", "fct_nfl_betting_settled"),
     "fct_nfl_betting_upcoming": ("silver", "fct_nfl_betting_upcoming"),
     "fct_nfl_team_performance": ("silver", "fct_nfl_team_performance"),
+    "fct_nfl_team_market_games": ("silver", "fct_nfl_team_market_games"),
     "analytics_nfl_team_betting_stats": ("gold", "analytics_nfl_team_betting_stats"),
     "analytics_nfl_team_rankings": ("gold", "analytics_nfl_team_rankings"),
     "analytics_nfl_upcoming_matchups": ("gold", "analytics_nfl_upcoming_matchups"),
     "semantic_team_season_form": ("semantic", "semantic_team_season_form"),
     "semantic_game_results": ("semantic", "semantic_game_results"),
     "semantic_upcoming_matchups": ("semantic", "semantic_upcoming_matchups"),
+    "semantic_consensus_spread_bands": ("semantic", "semantic_consensus_spread_bands"),
+    "semantic_consensus_total_bands": ("semantic", "semantic_consensus_total_bands"),
 }
 
 
