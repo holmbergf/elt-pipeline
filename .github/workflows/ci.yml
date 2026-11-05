@@ -1,4 +1,5 @@
 name: ci
+# CI: pytest + dbt parse + terraform validate on every push/PR.
 
 on:
   push:
