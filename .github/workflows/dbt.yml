@@ -28,10 +28,12 @@ jobs:
           cache: pip
       - name: Install dbt
         run: pip install dbt-duckdb duckdb
-      # Slim CI: compare against the production manifest from the latest
-      # successful nfl-ingest run and build only modified models + parents/
-      # children, against 10-row mock raw fixtures (tests/fixtures/raw).
-      # Without a prod artifact (first run), fall back to a full fixture build.
+      # Slim selection is computed against the production manifest from the
+      # latest successful nfl-ingest run and reported below, but the build
+      # itself is full: CI DuckDB is ephemeral (no prod schema to clone), and
+      # slim selection kept producing false failures when singular tests
+      # referenced tables outside the selection. The full fixture build
+      # (38 nodes) takes <2 min, so correctness wins over slim here.
       - name: Fetch prod manifest (slim state)
         continue-on-error: true
         env:
@@ -50,9 +52,9 @@ jobs:
         run: |
           dbt seed --profiles-dir .
           if [ -f ../prod-state/manifest.json ]; then
-            echo "Slim build: +state:modified+ (modified + parents/children) against prod manifest"
-            dbt build --profiles-dir . --select +state:modified+ --state ../prod-state
+            echo "Changed vs prod (slim selection, informational):"
+            dbt ls --profiles-dir . --select +state:modified+ --state ../prod-state --resource-type model --output name || true
           else
             echo "No prod manifest found; full build on fixtures"
-            dbt build --profiles-dir .
           fi
+          dbt build --profiles-dir .
