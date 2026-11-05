@@ -62,12 +62,12 @@ select
     t.consensus_total_favorite as market_total_preference
 
 from games g
-inner join spreads s on g.game_date = s.game_date 
+left join spreads s on g.game_date = s.game_date 
     and (
         (g.home_team = s.home_team and g.away_team = s.away_team)
         or (g.home_team = s.away_team and g.away_team = s.home_team)
     )
-inner join totals t on g.game_date = t.game_date 
+left join totals t on g.game_date = t.game_date 
     and (
         (g.home_team = t.home_team and g.away_team = t.away_team)
         or (g.home_team = t.away_team and g.away_team = t.home_team)

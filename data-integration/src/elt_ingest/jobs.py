@@ -68,11 +68,16 @@ async def run_games(
     return result
 
 
-async def _run_market(dataset: str, scrape_fn, settings, mode: str, batch_size: int = 50) -> WriteResult:
+async def _run_market(dataset: str, scrape_fn, settings, mode: str, batch_size: int = 50, season: int | None = None) -> WriteResult:
     s, storage = _settings_and_storage(settings)
     state = StateStore(storage)
     if mode == "backfill":
-        dates = sorted(state.game_dates(), reverse=True)
+        # Missing dates only (never re-scrape covered dates); optionally
+        # scoped to one season's window (Sep 1 - Feb 28).
+        dates = state.missing_dates(dataset)
+        if season is not None:
+            lo, hi = f"{season}-09-01", f"{season + 1}-02-28"
+            dates = [d for d in dates if lo <= d <= hi]
     else:
         dates = state.missing_dates(dataset, since_days=14)
     if not dates:
@@ -94,9 +99,9 @@ async def _run_market(dataset: str, scrape_fn, settings, mode: str, batch_size: 
     return combined
 
 
-async def run_spreads(settings=None, mode: str = "incremental") -> WriteResult:
-    return await _run_market("spreads", scrape_nfl_spreads, settings, mode)
+async def run_spreads(settings=None, mode: str = "incremental", season: int | None = None) -> WriteResult:
+    return await _run_market("spreads", scrape_nfl_spreads, settings, mode, season=season)
 
 
-async def run_totals(settings=None, mode: str = "incremental") -> WriteResult:
-    return await _run_market("totals", scrape_nfl_over_unders, settings, mode)
+async def run_totals(settings=None, mode: str = "incremental", season: int | None = None) -> WriteResult:
+    return await _run_market("totals", scrape_nfl_over_unders, settings, mode, season=season)

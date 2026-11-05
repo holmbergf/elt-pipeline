@@ -60,6 +60,11 @@ def publish(db_path: Path, settings: Settings | None = None) -> dict[str, int]:
         arrow = pa.Table.from_pandas(df, preserve_index=False)
         ident = (layer, table_name)
         catalog.create_namespace_if_not_exists(layer)
+        if catalog.table_exists(ident):
+            existing = {f.name for f in catalog.load_table(ident).schema().fields}
+            if existing != set(arrow.column_names):
+                # Publisher is a full overwrite; recreate on schema change.
+                catalog.drop_table(ident)
         if not catalog.table_exists(ident):
             # Unpartitioned at this scale (~10k rows); Basin Catalog maintenance
             # (compaction) is enabled at the catalog level. Revisit if a fact

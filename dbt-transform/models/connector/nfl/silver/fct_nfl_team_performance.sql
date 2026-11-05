@@ -4,7 +4,10 @@
 ) }}
 
 with base_games as (
+    -- Played games only: unplayed fixtures would dilute every running
+    -- denominator with scheduled-but-unplayed rows.
     select * from {{ ref('clean_nfl_games') }}
+    where home_score is not null and away_score is not null
 ),
 
 betting as (
@@ -32,7 +35,8 @@ game_performance as (
         case when b.total_outcome = 'Under' then 1 else 0 end as is_under,
         case when b.total_outcome = 'Push' then 1 else 0 end as is_total_push,
         case when b.was_consensus_spread_winner then 1 else 0 end as was_consensus_spread_correct,
-        case when b.was_consensus_total_winner then 1 else 0 end as was_consensus_total_correct
+        case when b.was_consensus_total_winner then 1 else 0 end as was_consensus_total_correct,
+        case when b.game_id is not null then 1 else 0 end as is_market_game
     from base_games g
     left join betting b on g.game_date = b.game_date and g.home_team = b.home_team and g.away_team = b.away_team
     
@@ -58,7 +62,8 @@ game_performance as (
         case when b.total_outcome = 'Under' then 1 else 0 end as is_under,
         case when b.total_outcome = 'Push' then 1 else 0 end as is_total_push,
         case when b.was_consensus_spread_winner then 1 else 0 end as was_consensus_spread_correct,
-        case when b.was_consensus_total_winner then 1 else 0 end as was_consensus_total_correct
+        case when b.was_consensus_total_winner then 1 else 0 end as was_consensus_total_correct,
+        case when b.game_id is not null then 1 else 0 end as is_market_game
     from base_games g
     left join betting b on g.game_date = b.game_date and g.home_team = b.home_team and g.away_team = b.away_team
 ),
@@ -85,6 +90,7 @@ running_totals as (
         -- Consensus Performance (How often consensus was right in games involving this team)
         sum(was_consensus_spread_correct) over (partition by team_name, season order by game_date rows between unbounded preceding and current row) as running_consensus_spread_wins,
         sum(was_consensus_total_correct) over (partition by team_name, season order by game_date rows between unbounded preceding and current row) as running_consensus_total_wins,
+        sum(is_market_game) over (partition by team_name, season order by game_date rows between unbounded preceding and current row) as running_market_games,
         
         -- Rolling Average Total Points
         avg(points_scored + points_allowed) over (partition by team_name, season order by game_date rows between unbounded preceding and current row) as running_avg_total_points
@@ -112,16 +118,17 @@ select
     cast(running_wins as varchar) || '-' || cast(running_losses as varchar) || '-' || cast(running_ties as varchar) as running_record,
     
     -- ATS Running
-    round((running_ats_wins + 0.5 * running_ats_pushes) / running_games_played, 3) as running_ats_win_percentage,
+    round((running_ats_wins + 0.5 * running_ats_pushes) / nullif(running_ats_wins + running_ats_losses + running_ats_pushes, 0), 3) as running_ats_win_percentage,
     cast(running_ats_wins as varchar) || '-' || cast(running_ats_losses as varchar) || '-' || cast(running_ats_pushes as varchar) as running_ats_record,
     
     -- Over/Under Running
-    round((running_overs + 0.5 * running_total_pushes) / running_games_played, 3) as running_over_percentage,
+    round((running_overs + 0.5 * running_total_pushes) / nullif(running_overs + running_unders + running_total_pushes, 0), 3) as running_over_percentage,
     cast(running_overs as varchar) || '-' || cast(running_unders as varchar) || '-' || cast(running_total_pushes as varchar) as running_over_under_record,
     
     -- Consensus Market Performance Running
-    round(running_consensus_spread_wins / running_games_played, 3) as running_consensus_spread_win_percentage,
-    round(running_consensus_total_wins / running_games_played, 3) as running_consensus_total_win_percentage,
+    round(running_consensus_spread_wins / nullif(running_market_games, 0), 3) as running_consensus_spread_win_percentage,
+    round(running_consensus_total_wins / nullif(running_market_games, 0), 3) as running_consensus_total_win_percentage,
+    running_market_games as games_with_market,
 
     -- Rolling Point Totals
     round(running_avg_total_points, 2) as running_avg_total_points

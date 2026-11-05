@@ -8,6 +8,7 @@ with market_stats as (
         team_name,
         season,
         count(*) as total_games_played,
+        max_by(games_with_market, game_date) as games_with_market,
         -- Market Spread Performance
         max_by(running_ats_win_percentage, game_date) as ats_win_percentage,
         max_by(running_ats_record, game_date) as ats_record,
