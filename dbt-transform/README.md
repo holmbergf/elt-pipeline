@@ -52,3 +52,10 @@ Tests: `_schema.yml` (unique/not_null/relationships), source freshness
 betting-join coverage at warn severity). Full refresh everywhere;
 switch `fct_*` to incremental merge on `game_id` when a full build
 exceeds ~10 minutes.
+
+## CI
+
+`ci/dbt` (path-filtered to `dbt-transform/**`) runs a slim build
+(`state:modified+` against the production manifest from the latest
+`nfl-ingest` run, full-build fallback) plus all data tests, against the
+10-row mock raw fixtures in `tests/fixtures/`.
