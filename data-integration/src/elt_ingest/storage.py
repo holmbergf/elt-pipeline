@@ -7,9 +7,9 @@ Layout in the bucket / local dir:
   _manifests/nfl/<dataset>/<run_id>.json
 
 Keys are content-addressed, so re-running the same scrape is a no-op
-(idempotent) instead of appending duplicates like the MotherDuck writer did.
+(idempotent) instead of appending duplicates on re-runs.
 Manifests are the watermark/state store (Step 3): they record covered dates,
-max game date and row counts per run, replacing all MotherDuck queries.
+max game date and row counts per run; this is the pipeline's only state store.
 """
 
 from __future__ import annotations
@@ -175,7 +175,7 @@ def write_dataset(storage, df: pd.DataFrame, dataset: str, source: str) -> Write
 
 
 class StateStore:
-    """Watermarks derived from run manifests (replaces MotherDuck state queries)."""
+    """Watermarks derived from run manifests."""
 
     def __init__(self, storage):
         self.storage = storage

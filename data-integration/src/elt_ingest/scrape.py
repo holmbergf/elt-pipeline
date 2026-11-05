@@ -1,12 +1,12 @@
-"""Scrapers for Pro-Football-Reference (games) and Covers.com (spreads/totals).
+"""Covers.com scrapers (spreads/totals consensus + matchups fallback for games).
 
-Retries use tenacity; per-season/date failures are logged, not silently skipped.
-The Playwright fallback stays because PFR intermittently blocks plain requests.
+Retries use tenacity; per-date failures are logged, not silently skipped.
+Primary games source is nflverse (see nflverse.py); Covers matchups are the
+selectable fallback (GAMES_SOURCE=covers).
 """
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 from datetime import datetime
@@ -19,7 +19,6 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 log = logging.getLogger(__name__)
 
-PFR_GAMES_URL = "https://www.pro-football-reference.com/years/{year}/games.htm"
 COVERS_SPREADS_URL = "https://contests.covers.com/consensus/topconsensus/nfl/overall/"
 COVERS_TOTALS_URL = "https://contests.covers.com/consensus/topoverunderconsensus/nfl/overall/"
 _UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
@@ -32,15 +31,6 @@ def _fetch_html(url: str) -> str:
     return r.text
 
 
-def _parse_games_table(html: str) -> pd.DataFrame | None:
-    soup = BeautifulSoup(html, "html.parser")
-    table = soup.find("table", {"id": "games"})
-    if table is not None:
-        return pd.read_html(StringIO(str(table)))[0]
-    dfs = pd.read_html(StringIO(html))
-    return dfs[0] if dfs else None
-
-
 def _resolve_years(seasons, start_year, end_year) -> list[int]:
     current = datetime.now().year
     if seasons:
@@ -50,58 +40,6 @@ def _resolve_years(seasons, start_year, end_year) -> list[int]:
         ey = end_year if end_year is not None else current
         return list(range(min(sy, ey), max(sy, ey) + 1))
     return [current]
-
-
-async def scrape_nfl_games(seasons=None, start_year=None, end_year=None) -> pd.DataFrame:
-    years = _resolve_years(seasons, start_year, end_year)
-    timestamp = pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%d %H:%M:%S %Z")
-    frames: list[pd.DataFrame] = []
-    for i, yr in enumerate(years):
-        if i > 0:
-            time.sleep(2)
-        try:
-            df = _parse_games_table(_fetch_html(PFR_GAMES_URL.format(year=yr)))
-            if df is not None:
-                frames.append(df.assign(season=yr, timestamp_imported=timestamp))
-        except Exception as exc:  # fall through to Playwright below
-            log.warning("requests scrape failed for season %s: %s", yr, exc)
-            frames = []
-            break
-    if not frames:
-        frames = await _scrape_games_playwright(years, timestamp)
-    if not frames:
-        raise RuntimeError(
-            f"No tables found for season(s) {years}. PFR may be rate-limiting; "
-            "scrape fewer years or wait a few minutes."
-        )
-    result = pd.concat(frames, ignore_index=True)
-    result.columns = [str(c).strip().lower().replace(" ", "_") for c in result.columns]
-    return result
-
-
-async def _scrape_games_playwright(years: list[int], timestamp: str) -> list[pd.DataFrame]:
-    """Headless fallback. Headed/real-Chrome variant is archived in
-    data-integration/legacy/headed_pfr.py (Cloudflare challenge loops there)."""
-    from playwright.async_api import async_playwright
-
-    frames: list[pd.DataFrame] = []
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        try:
-            page = await browser.new_page(user_agent=_UA)
-            for i, yr in enumerate(years):
-                if i > 0:
-                    await asyncio.sleep(3)
-                try:
-                    await page.goto(PFR_GAMES_URL.format(year=yr), timeout=30_000, wait_until="domcontentloaded")
-                    df = _parse_games_table(await page.content())
-                    if df is not None:
-                        frames.append(df.assign(season=yr, timestamp_imported=timestamp))
-                except Exception as exc:
-                    log.warning("Playwright scrape failed for season %s: %s", yr, exc)
-        finally:
-            await browser.close()
-    return frames
 
 
 def _scrape_covers(base_url: str, dates: list[str]) -> pd.DataFrame:
@@ -140,10 +78,9 @@ async def scrape_nfl_over_unders(dates: list[str]) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# Covers.com NFL matchups -> PFR-shaped games frame (replaces the PFR scrape,
-# which is behind a Cloudflare challenge as of 2026-11; Covers returns 200).
-# Output columns mirror the old PFR scrape so clean.normalise_games and the
-# dbt bronze model keep working unchanged. Yards/turnovers come from each
+# Covers.com NFL matchups -> canonical games frame (fallback games source).
+# Output columns match the canonical games schema so clean.normalise_games
+# and the dbt bronze model work unchanged. Yards/turnovers come from each
 # game's boxscore page when its stats table parses, else null (bronze-only
 # columns; nothing downstream consumes them).
 # ---------------------------------------------------------------------------
@@ -151,7 +88,7 @@ async def scrape_nfl_over_unders(dates: list[str]) -> pd.DataFrame:
 COVERS_MATCHUPS_URL = "https://www.covers.com/sports/nfl/matchups?selectedDate={date}"
 COVERS_BOXSCORE_URL = "https://www.covers.com/sport/football/nfl/matchup/{game_id}"
 
-# Covers team slug -> Pro-Football-Reference name (must match seeds/nfl_team_mappings.csv pfr_name)
+# Covers team slug -> full team name (must match seeds/nfl_team_mappings.csv full_team_name)
 COVERS_TEAM_NAMES = {
     "arizona-cardinals": "Arizona Cardinals", "atlanta-falcons": "Atlanta Falcons",
     "baltimore-ravens": "Baltimore Ravens", "buffalo-bills": "Buffalo Bills",

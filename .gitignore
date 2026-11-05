@@ -27,9 +27,8 @@ dbt_packages/
 crash.log
 crash.*.log
 
-# Cloudflare / browser caches
+# Cloudflare caches
 .wrangler/
-.pfr-profile/
 
 # Local data (R2 is the source of truth)
 data/

@@ -24,7 +24,7 @@ FIXTURE = """
 """
 
 
-def test_parse_covers_matchups_to_pfr_shape():
+def test_parse_covers_matchups_to_games_schema():
     df = parse_covers_matchups(
         FIXTURE,
         season=2026,
@@ -33,7 +33,7 @@ def test_parse_covers_matchups_to_pfr_shape():
     )
     assert len(df) == 2
     home_win = df.iloc[0]
-    assert home_win["winner"] == "Green Bay Packers"  # PFR name, matches seed mapping
+    assert home_win["winner"] == "Green Bay Packers"  # full name, matches seed mapping
     assert home_win["loser"] == "Carolina Panthers"
     assert home_win["location"] == ""  # winner at home
     assert (home_win["points_winner"], home_win["points_loser"]) == (27, 19)

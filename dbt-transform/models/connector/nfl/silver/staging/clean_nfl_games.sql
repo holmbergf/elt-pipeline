@@ -19,8 +19,8 @@ mapped as (
         h.team_name as home_team,
         a.team_name as away_team
     from base b
-    left join {{ ref('nfl_team_mappings') }} h on b.home_team_raw = h.pfr_name
-    left join {{ ref('nfl_team_mappings') }} a on b.away_team_raw = a.pfr_name
+    left join {{ ref('nfl_team_mappings') }} h on b.home_team_raw = h.full_team_name
+    left join {{ ref('nfl_team_mappings') }} a on b.away_team_raw = a.full_team_name
 )
 
 select

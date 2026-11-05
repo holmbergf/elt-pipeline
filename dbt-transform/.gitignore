@@ -9,3 +9,6 @@ logs/
 *.duckdb.tmp
 
 dbt_internal_packages/
+
+# dbt user id (per-developer)
+.user.yml

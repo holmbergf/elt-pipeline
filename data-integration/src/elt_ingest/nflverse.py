@@ -1,10 +1,10 @@
-"""NFL games from nflverse (Lee Sharpe's schedule dataset) — the PFR replacement.
+"""NFL games from nflverse (Lee Sharpe's schedule dataset).
 
 One CSV (~2 MB, 1999-present, refreshed in-season) from the nflverse/nfldata
-repo; no scraping, no Cloudflare. Output mirrors the old PFR scrape's columns
+repo; no scraping. Output uses the canonical games columns
 so clean.normalise_games and the dbt bronze model keep working unchanged.
 Yards/turnovers are not in this dataset and stay null (bronze-only columns).
-Team abbreviations are normalised to PFR full names (seed mapping in dbt).
+Team abbreviations are normalised to full team names (seed mapping in dbt).
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 NFLVERSE_GAMES_URL = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv"
 
-# nflverse abbreviation -> PFR full name (must match seeds/nfl_team_mappings.csv pfr_name).
+# nflverse abbreviation -> full team name (must match seeds/nfl_team_mappings.csv full_team_name).
 # Historical relocations collapse to the name present in the seed for that code.
 TEAM_NAMES = {
     "ARI": "Arizona Cardinals", "ATL": "Atlanta Falcons", "BAL": "Baltimore Ravens",

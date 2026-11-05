@@ -9,7 +9,7 @@ import pandas as pd
 
 from .clean import MARKET_NATURAL_KEY, dedupe, normalise_games
 from .config import Settings
-from .scrape import scrape_nfl_games, scrape_nfl_games_covers, scrape_nfl_over_unders, scrape_nfl_spreads
+from .scrape import scrape_nfl_games_covers, scrape_nfl_over_unders, scrape_nfl_spreads
 from .storage import StateStore, WriteResult, get_storage, write_dataset
 
 log = logging.getLogger(__name__)
@@ -29,13 +29,11 @@ def _maybe_iceberg(settings: Settings, dataset: str, df: pd.DataFrame, result: W
 
 
 def _scrape_games(years):
-    """Games source: nflverse by default (one CSV, no scraping). GAMES_SOURCE=covers|pfr selects the scrapers."""
+    """Games source: nflverse by default (one CSV, no scraping). GAMES_SOURCE=covers selects the Covers fallback."""
     import asyncio
     import os
 
     source = os.getenv("GAMES_SOURCE", "nflverse").lower()
-    if source == "pfr":
-        return scrape_nfl_games(seasons=years)
     if source == "covers":
         return scrape_nfl_games_covers(seasons=years)
     from .nflverse import fetch_nflverse_games

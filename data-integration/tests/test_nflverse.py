@@ -7,11 +7,11 @@ CSV = """game_id,season,game_type,week,gameday,weekday,gametime,away_team,away_s
 """
 
 
-def test_parse_nflverse_to_pfr_shape():
+def test_parse_nflverse_to_games_schema():
     df = parse_nflverse_games(CSV, seasons=[2026], timestamp="2026-11-04 00:00:00 UTC")
     assert len(df) == 2  # 2025 filtered out
     home_win = df.iloc[0]
-    assert home_win["winner"] == "Seattle Seahawks"
+    assert home_win["winner"] == "Seattle Seahawks"  # full name, matches seed mapping
     assert home_win["loser"] == "New England Patriots"
     assert home_win["location"] == ""
     assert (home_win["points_winner"], home_win["points_loser"]) == (13, 10)

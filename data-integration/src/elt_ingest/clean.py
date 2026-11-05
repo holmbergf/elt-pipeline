@@ -31,7 +31,7 @@ MARKET_NATURAL_KEY = ["event_date", "matchup"]
 
 def apply_games_mapping(df: pd.DataFrame) -> pd.DataFrame:
     df = df.rename(columns={k: v for k, v in GAMES_COLUMN_MAPPING.items() if k in df.columns})
-    # Scraped PFR tables carry a stray duplicate header column ("date.1" = "boxscore").
+    # Raw games tables can carry a stray duplicate header column ("date.1" = "boxscore").
     df = df.drop(columns=[c for c in df.columns if str(c).endswith(".1")], errors="ignore")
     if "date" in df.columns:
         df = df[~df["date"].astype(str).str.lower().isin(["date", "playoffs"])]
@@ -39,7 +39,7 @@ def apply_games_mapping(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def parse_game_date(date_str: object, season: int) -> pd.Timestamp:
-    """Parse PFR game_date (e.g. 'Thu Sep 5') using the season for the year."""
+    """Parse a game_date (e.g. 'Thu Sep 5') using the season for the year."""
     if pd.isna(date_str) or str(date_str).strip() == "":
         return pd.NaT
     s = str(date_str).strip()

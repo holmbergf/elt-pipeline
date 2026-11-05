@@ -8,7 +8,7 @@ sources:
       freshness: {warn_after: {count: 8, period: day}, error_after: {count: 15, period: day}}
     tables:
       - name: raw_nfl_games
-        description: "NFL games from nflverse (PFR-shaped)."
+        description: "NFL games from nflverse."
       - name: raw_nfl_spreads
         description: "NFL betting spreads and consensus from Covers.com."
       - name: raw_nfl_totals

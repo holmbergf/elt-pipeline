@@ -5,7 +5,7 @@ Cloudflare-based ELT (Extract, Load, Transform) data pipeline for NFL data inges
 ## Architecture & Storage
 
 - **Object Storage**: Cloudflare R2 bucket (`nfl`) with `ingestion/` and `data_warehouse/` zones for the data lake and warehouse.
-- **Ingestion**: Python package in [`data-integration/`](data-integration/) — scrapes PFR/Covers, lands partitioned Parquet in R2, appends to Basin Catalog Iceberg tables (`nfl.raw_nfl_*`). MotherDuck/local-disk writes are removed; state lives in R2 run manifests. See [`.env.example`](.env.example) and [`infra/basin/`](infra/basin/).
+- **Ingestion**: Python package in [`data-integration/`](data-integration/) — nflverse games + Covers spreads/totals, partitioned Parquet in R2, Basin Catalog Iceberg tables (`nfl.raw_nfl_*`). State lives in R2 run manifests. See [`.env.example`](.env.example).
 - **Infrastructure as Code**: Terraform configurations located in [`infra/`](infra/).
 - **Data Transformation**: dbt project located in [`dbt-transform/`](dbt-transform/) (powered by **dbt v2** `2.0.11` with built-in DuckDB engine).
 

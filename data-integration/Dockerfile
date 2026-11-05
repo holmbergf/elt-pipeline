@@ -5,7 +5,7 @@ WORKDIR /app
 
 COPY pyproject.toml README.md ./
 COPY src ./src
-RUN pip install ".[browser,iceberg]" && playwright install --with-deps chromium
+RUN pip install ".[iceberg]"
 
 # Incremental NFL ingestion (games -> spreads -> totals). State lives in R2
 # manifests, so the container is stateless. Trigger on a schedule with
