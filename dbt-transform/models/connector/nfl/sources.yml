@@ -13,3 +13,16 @@ sources:
         description: "NFL betting spreads and consensus from Covers.com."
       - name: raw_nfl_totals
         description: "NFL betting totals and consensus from Covers.com."
+
+  - name: basin_ncaaf
+    description: "Raw NCAAF Iceberg tables in Basin Catalog on R2 bucket `ncaaf` (ingestion/ zone), written by elt-ingest --sport ncaaf."
+    config:
+      loaded_at_field: timestamp_imported
+      freshness: {warn_after: {count: 8, period: day}, error_after: {count: 15, period: day}}
+    tables:
+      - name: raw_ncaaf_games
+        description: "NCAAF games from ESPN scoreboard API (with Top-25 ranks)."
+      - name: raw_ncaaf_spreads
+        description: "NCAAF betting spreads and consensus from Covers.com."
+      - name: raw_ncaaf_totals
+        description: "NCAAF betting totals and consensus from Covers.com."

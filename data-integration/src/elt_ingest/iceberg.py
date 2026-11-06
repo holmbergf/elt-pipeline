@@ -56,14 +56,38 @@ def connect(settings: Settings):
     )
 
 
+CFB_TABLES = {"games": "raw_ncaaf_games", "spreads": "raw_ncaaf_spreads", "totals": "raw_ncaaf_totals"}
+CFB_SCHEMAS: dict[str, pa.Schema] = {
+    "games": pa.schema([
+        ("date", _STR), ("time", _STR), ("season", _INT), ("week", _STR), ("day", _STR),
+        ("home_team", _STR), ("away_team", _STR), ("home_score", _INT), ("away_score", _INT),
+        ("home_rank", _INT), ("away_rank", _INT), ("is_ranked_home", pa.bool_()),
+        ("is_ranked_away", pa.bool_()), ("is_top25_matchup", pa.bool_()),
+        ("winner", _STR), ("loser", _STR), ("location", _STR),
+        ("points_winner", _INT), ("points_loser", _INT), ("boxscore", _STR),
+        ("timestamp_imported", _STR), ("espn_home_abbr", _STR), ("espn_away_abbr", _STR),
+    ]),
+    "spreads": SCHEMAS["spreads"],
+    "totals": SCHEMAS["totals"],
+}
+
+
+def _tables_for(settings: Settings, dataset: str):
+    return CFB_TABLES if settings.basin_namespace == "ncaaf" else NAMESPACE_TABLES
+
+
+def _schemas_for(settings: Settings):
+    return CFB_SCHEMAS if settings.basin_namespace == "ncaaf" else SCHEMAS
+
+
 def ensure_tables(settings: Settings) -> list[str]:
     catalog = connect(settings)
     catalog.create_namespace_if_not_exists(settings.basin_namespace)
     created = []
-    for dataset, table in NAMESPACE_TABLES.items():
+    for dataset, table in _tables_for(settings, "").items():
         ident = (settings.basin_namespace, table)
         if not catalog.table_exists(ident):
-            catalog.create_table(ident, schema=SCHEMAS[dataset])
+            catalog.create_table(ident, schema=_schemas_for(settings)[dataset])
             created.append(table)
             log.info("created Iceberg table %s.%s", *ident)
     return created
@@ -73,16 +97,17 @@ def append_dataframe(settings: Settings, dataset: str, df) -> None:
     """Append a pandas frame to its Iceberg table (schema-aligned, extra cols dropped)."""
     import pyarrow as pa
 
-    schema = SCHEMAS[dataset]
+    schema = _schemas_for(settings)[dataset]
     aligned = df.reindex(columns=schema.names).copy()
     for field in schema:
         if pa.types.is_string(field.type):
             aligned[field.name] = aligned[field.name].map(lambda v: None if pd.isna(v) else str(v))
-    if "season" in schema.names:
-        aligned = aligned.assign(season=aligned["season"].astype("Int64"))
+    for int_col in ("season", "home_score", "away_score", "home_rank", "away_rank", "points_winner", "points_loser"):
+        if int_col in schema.names:
+            aligned = aligned.assign(**{int_col: aligned[int_col].astype("Int64")})
     table = pa.Table.from_pandas(aligned, schema=schema, preserve_index=False)
     catalog = connect(settings)
-    catalog.load_table((settings.basin_namespace, NAMESPACE_TABLES[dataset])).append(table)
+    catalog.load_table((settings.basin_namespace, _tables_for(settings, dataset)[dataset])).append(table)
 
 
 if __name__ == "__main__":

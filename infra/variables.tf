@@ -21,3 +21,9 @@ variable "r2_bucket_location" {
   type        = string
   default     = null
 }
+
+variable "ncaaf_bucket_name" {
+  description = "NCAAF R2 bucket holding ingestion/ and data_warehouse/ zones."
+  type        = string
+  default     = "ncaaf"
+}

@@ -49,6 +49,7 @@ jobs:
         working-directory: dbt-transform
         env:
           RAW_BASE_PATH: ${{ github.workspace }}/dbt-transform/tests/fixtures/raw/ingestion
+          RAW_BASE_PATH_NCAAF: ${{ github.workspace }}/dbt-transform/tests/fixtures/raw/ingestion
         run: |
           dbt seed --profiles-dir .
           if [ -f ../prod-state/manifest.json ]; then

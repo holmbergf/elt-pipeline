@@ -24,6 +24,8 @@ class Settings:
     storage_backend: str = "local"  # "r2" | "local"
     local_data_dir: Path = REPO_ROOT / "data" / "raw"
     r2_bucket: str = "nfl"
+    ncaaf_bucket: str = "ncaaf"
+    sport: str = "nfl"
     ingestion_prefix: str = "ingestion"
     r2_account_id: str = ""
     r2_access_key_id: str = ""
@@ -47,6 +49,7 @@ class Settings:
             storage_backend=backend,
             local_data_dir=Path(os.getenv("LOCAL_DATA_DIR", str(REPO_ROOT / "data" / "raw"))),
             r2_bucket=os.getenv("R2_BUCKET", "nfl"),
+            ncaaf_bucket=os.getenv("NCAAF_BUCKET", "ncaaf"),
             ingestion_prefix=os.getenv("INGESTION_PREFIX", "ingestion").strip("/"),
             r2_account_id=account,
             r2_access_key_id=os.getenv("R2_ACCESS_KEY_ID", ""),

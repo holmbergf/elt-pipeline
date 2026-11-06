@@ -13,6 +13,7 @@ from .config import Settings
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="elt-ingest")
     p.add_argument("dataset", choices=["games", "spreads", "totals", "all"])
+    p.add_argument("--sport", choices=["nfl", "ncaaf"], default="nfl")
     p.add_argument("--mode", choices=["incremental", "backfill"], default="incremental")
     p.add_argument("--start-year", type=int, default=2015)
     p.add_argument("--season", type=int, default=None, help="backfill only: restrict market jobs to one season (Sep-Feb window)")
@@ -25,6 +26,16 @@ def main(argv: list[str] | None = None) -> int:
 
     async def _run():
         results = []
+        if args.sport == "ncaaf":
+            from . import jobs_cfb
+
+            if args.dataset in ("games", "all"):
+                results.append(await jobs_cfb.run_cfb_games(settings, mode=args.mode, start_year=args.start_year))
+            if args.dataset in ("spreads", "all"):
+                results.append(await jobs_cfb.run_cfb_spreads(settings, mode=args.mode))
+            if args.dataset in ("totals", "all"):
+                results.append(await jobs_cfb.run_cfb_totals(settings, mode=args.mode))
+            return results
         if args.dataset in ("games", "all"):
             results.append(await jobs.run_games(settings, mode=args.mode, start_year=args.start_year))
         if args.dataset in ("spreads", "all"):

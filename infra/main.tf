@@ -11,3 +11,16 @@ resource "cloudflare_r2_data_catalog" "nfl" {
   account_id  = var.cloudflare_account_id
   bucket_name = cloudflare_r2_bucket.nfl.name
 }
+
+# College football connector: identical layout to the NFL bucket
+# (ingestion/ landing zone + data_warehouse/ published layer).
+resource "cloudflare_r2_bucket" "ncaaf" {
+  account_id = var.cloudflare_account_id
+  name       = var.ncaaf_bucket_name
+  location   = var.r2_bucket_location
+}
+
+resource "cloudflare_r2_data_catalog" "ncaaf" {
+  account_id  = var.cloudflare_account_id
+  bucket_name = cloudflare_r2_bucket.ncaaf.name
+}

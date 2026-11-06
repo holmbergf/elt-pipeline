@@ -1,8 +1,8 @@
 # elt-pipeline
 
-Cloudflare-based ELT pipeline for NFL data: ingest games and betting markets,
-land them in R2, model them with dbt, and serve analytics from Apache Iceberg
-tables in Basin Catalog.
+Cloudflare-based ELT pipeline for NFL and NCAAF data: ingest games and betting
+markets, land them in R2, model them with dbt, and serve analytics from Apache
+Iceberg tables in Basin Catalog.
 
 Production entry point is GitHub Actions — the pipeline runs autonomously on
 schedule (see [Autonomous operation](#autonomous-operation)).
@@ -39,6 +39,15 @@ Covers (spreads,      ├─ elt-ingest ─► R2 bucket `nfl`
 - **Infrastructure** ([`infra/`](infra/)): Terraform provisions the R2 bucket
   `nfl` and its Basin Catalog (`cloudflare_r2_data_catalog`). Nothing is
   provisioned by hand or by Wrangler.
+- **NCAAF connector**: mirrors NFL end-to-end in its own bucket `ncaaf`
+  (Terraform-provisioned, same `ingestion/` + `data_warehouse/` layout).
+  Games come from ESPN's scoreboard API (`elt-ingest --sport ncaaf`, with
+  Top-25 ranks from `curatedRank`), spreads/totals from the Covers NCAAF
+  consensus pages. dbt models under `models/connector/ncaaf/` mirror the NFL
+  bronze/silver/gold/semantic layers, adding `home_rank`/`away_rank`/
+  `is_top25_matchup`; the Covers-code → ESPN-name mapping lives in
+  `seeds/ncaaf_team_mappings.csv`. Published to the `ncaaf` Basin Catalog
+  with `publish_warehouse --sport=ncaaf`.
 
 ## Repository structure
 

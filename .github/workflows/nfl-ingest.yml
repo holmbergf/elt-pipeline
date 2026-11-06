@@ -1,4 +1,4 @@
-name: nfl-ingest
+name: ingest (nfl + ncaaf)
 
 on:
   schedule:
@@ -9,6 +9,8 @@ on:
     - cron: "0 15 * * 0"
     - cron: "0 21 * * 1"
     - cron: "0 21 * * 4"
+    # Sat 07:00 PT: pre-Saturday college slate (NCAAF connector).
+    - cron: "0 15 * * 6"
   workflow_dispatch:
     inputs:
       mode:
@@ -48,10 +50,22 @@ jobs:
           BASIN_WAREHOUSE: ${{ secrets.BASIN_WAREHOUSE }}
           BASIN_TOKEN: ${{ secrets.BASIN_TOKEN }}
         run: elt-ingest all --mode "${{ inputs.mode || 'incremental' }}"
+      - name: Run NCAAF ingestion (ESPN games -> Covers spreads -> totals)
+        env:
+          STORAGE_BACKEND: r2
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: nfl
+          BASIN_CATALOG_URI: ${{ secrets.BASIN_CATALOG_URI }}
+          BASIN_WAREHOUSE: ${{ secrets.BASIN_WAREHOUSE }}
+          BASIN_TOKEN: ${{ secrets.BASIN_TOKEN }}
+        run: elt-ingest --sport ncaaf all --mode "${{ inputs.mode || 'incremental' }}"
       - name: dbt build (prod) and publish warehouse tables
         working-directory: dbt-transform
         env:
           RAW_BASE_PATH: s3://nfl/ingestion
+          RAW_BASE_PATH_NCAAF: s3://ncaaf/ingestion
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_S3_HOST: ${{ secrets.R2_S3_HOST }}
@@ -62,6 +76,7 @@ jobs:
           dbt seed --target prod --profiles-dir .
           dbt build --target prod --profiles-dir .
           python -m elt_ingest.publish_warehouse warehouse.duckdb
+          python -m elt_ingest.publish_warehouse warehouse.duckdb --sport=ncaaf
       - uses: actions/upload-artifact@v4
         if: always()
         with:

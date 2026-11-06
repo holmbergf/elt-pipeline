@@ -260,3 +260,15 @@ async def scrape_nfl_games_covers(seasons=None, start_year=None, end_year=None) 
     if not frames:
         raise RuntimeError(f"No Covers matchups found for season(s) {years}.")
     return pd.concat(frames, ignore_index=True)
+
+
+COVERS_NCAAF_SPREADS_URL = "https://contests.covers.com/consensus/topconsensus/ncaaf/overall/"
+COVERS_NCAAF_TOTALS_URL = "https://contests.covers.com/consensus/topoverunderconsensus/ncaaf/overall/"
+
+
+async def scrape_ncaaf_spreads(dates: list[str]) -> pd.DataFrame:
+    return _scrape_covers(COVERS_NCAAF_SPREADS_URL, dates)
+
+
+async def scrape_ncaaf_over_unders(dates: list[str]) -> pd.DataFrame:
+    return _scrape_covers(COVERS_NCAAF_TOTALS_URL, dates)

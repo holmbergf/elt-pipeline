@@ -22,3 +22,18 @@ output "warehouse_warehouse" {
   description = "Basin Catalog warehouse name for the warehouse bucket"
   value       = "${var.cloudflare_account_id}_${cloudflare_r2_bucket.nfl.name}"
 }
+
+output "ncaaf_bucket_name" {
+  description = "NCAAF warehouse bucket"
+  value       = cloudflare_r2_bucket.ncaaf.name
+}
+
+output "ncaaf_catalog_uri" {
+  description = "Iceberg REST catalog URI for the NCAAF bucket"
+  value       = "https://catalog.cloudflarestorage.com/${var.cloudflare_account_id}/${cloudflare_r2_bucket.ncaaf.name}"
+}
+
+output "ncaaf_warehouse" {
+  description = "Basin Catalog warehouse name for the NCAAF bucket"
+  value       = "${var.cloudflare_account_id}_${cloudflare_r2_bucket.ncaaf.name}"
+}

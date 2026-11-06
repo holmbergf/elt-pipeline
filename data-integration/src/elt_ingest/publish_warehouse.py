@@ -54,18 +54,42 @@ MODELS: dict[str, tuple[str, str]] = {
 }
 
 
-def publish(db_path: Path, settings: Settings | None = None) -> dict[str, int]:
+# dbt NCAAF model names carry the sport (semantic_ncaaf_*); published tables
+# keep the sport-neutral NFL table names inside the separate ncaaf catalog.
+NCAAF_MODELS: dict[str, tuple[str, str]] = {
+    (
+        name.replace("semantic_", "semantic_ncaaf_")
+        if name.startswith("semantic_")
+        else name.replace("_nfl_", "_ncaaf_")
+    ): (layer, table.replace("_nfl_", "_ncaaf_"))
+    for name, (layer, table) in MODELS.items()
+}
+
+
+def publish(db_path: Path, settings: Settings | None = None, sport: str = "nfl") -> dict[str, int]:
     from .iceberg import connect
 
     s = settings or Settings.from_env()
-    storage = get_storage(s)
+    models = MODELS
+    if sport == "ncaaf":
+        from .jobs_cfb import _cfb_settings
+
+        s = _cfb_settings(s)
+        models = NCAAF_MODELS
+        storage = get_storage(s, sport="ncaaf", bucket=s.ncaaf_bucket)
+    else:
+        storage = get_storage(s)
     catalog = connect(s)
     con = duckdb.connect(str(db_path), read_only=True)
     counts: dict[str, int] = {}
-    for model, (layer, table_name) in MODELS.items():
+    for model, (layer, table_name) in models.items():
         df = con.execute(f'SELECT * FROM main."{model}"').fetchdf()
         # DuckDB/pyarrow type hygiene: timestamps -> string-safe, ints stay ints.
         arrow = pa.Table.from_pandas(df, preserve_index=False)
+        # All-null columns arrive as pa.null(), which Iceberg v2 rejects.
+        for i, field in enumerate(arrow.schema):
+            if pa.types.is_null(field.type):
+                arrow = arrow.set_column(i, field.with_type(pa.string()), arrow.column(i).cast(pa.string()))
         ident = (layer, table_name)
         catalog.create_namespace_if_not_exists(layer)
         if catalog.table_exists(ident):
@@ -93,5 +117,7 @@ def publish(db_path: Path, settings: Settings | None = None) -> dict[str, int]:
 
 if __name__ == "__main__":
     logging.basicConfig(level="INFO")
-    path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("dbt-transform/dev.duckdb")
-    print(publish(path))
+    args = [a for a in sys.argv[1:] if not a.startswith("--sport")]
+    sport = next((a.split("=")[1] for a in sys.argv[1:] if a.startswith("--sport=")), "nfl")
+    path = Path(args[0]) if args else Path("dbt-transform/dev.duckdb")
+    print(publish(path, sport=sport))

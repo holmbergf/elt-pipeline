@@ -46,9 +46,10 @@ class WriteResult:
 class LocalStorage:
     """Filesystem backend for dev/tests (same key layout as R2)."""
 
-    def __init__(self, root: Path, prefix: str = DEFAULT_PREFIX):
+    def __init__(self, root: Path, prefix: str = DEFAULT_PREFIX, sport: str = "nfl"):
         self.root = Path(root)
         self.prefix = prefix
+        self.sport = sport
 
     def _path(self, key: str) -> Path:
         return self.root / key
@@ -77,6 +78,7 @@ class R2Storage:
     def __init__(self, settings: Settings):
         settings.require_r2()
         self.prefix = settings.ingestion_prefix
+        self.sport = getattr(settings, "sport", "nfl")
         import boto3
         from botocore.config import Config
 
@@ -120,8 +122,12 @@ class R2Storage:
             token = page["NextContinuationToken"]
 
 
-def get_storage(settings: Settings):
-    return R2Storage(settings) if settings.storage_backend == "r2" else LocalStorage(settings.local_data_dir, settings.ingestion_prefix)
+def get_storage(settings: Settings, sport: str = "nfl", bucket: str | None = None):
+    from dataclasses import replace
+
+    if bucket or sport != "nfl":
+        settings = replace(settings, r2_bucket=bucket or settings.r2_bucket, sport=sport)
+    return R2Storage(settings) if settings.storage_backend == "r2" else LocalStorage(settings.local_data_dir, settings.ingestion_prefix, sport)
 
 
 def _partition_groups(df: pd.DataFrame, dataset: str):
@@ -154,7 +160,7 @@ def write_dataset(storage, df: pd.DataFrame, dataset: str, source: str) -> Write
         # Hash without the import timestamp: identical data re-fetched later
         # must map to the same key (idempotent), not a new version per run.
         hash_part = part.drop(columns=["timestamp_imported"], errors="ignore")
-        key = f"{storage.prefix}/raw/nfl/{dataset}/{partition}/part-{content_hash(hash_part)}.parquet"
+        key = f"{storage.prefix}/raw/{storage.sport}/{dataset}/{partition}/part-{content_hash(hash_part)}.parquet"
         if storage.exists(key):
             result.skipped_keys.append(key)
             continue
@@ -172,7 +178,7 @@ def write_dataset(storage, df: pd.DataFrame, dataset: str, source: str) -> Write
         "max_date": result.max_date,
         "content_hash": content_hash(df),
     }
-    storage.put_bytes(f"{storage.prefix}/_manifests/nfl/{dataset}/{run_id}.json", json.dumps(manifest, indent=2).encode())
+    storage.put_bytes(f"{storage.prefix}/_manifests/{storage.sport}/{dataset}/{run_id}.json", json.dumps(manifest, indent=2).encode())
     log.info("wrote %s: %d rows, %d new objects, %d skipped", dataset, result.rows, len(result.keys), len(result.skipped_keys))
     return result
 
@@ -185,7 +191,7 @@ class StateStore:
 
     def manifests(self, dataset: str) -> list[dict]:
         out = []
-        for key in self.storage.list_keys(f"{self.storage.prefix}/_manifests/nfl/{dataset}/"):
+        for key in self.storage.list_keys(f"{self.storage.prefix}/_manifests/{self.storage.sport}/{dataset}/"):
             if key.endswith(".json"):
                 out.append(json.loads(self.storage.get_bytes(key)))
         return out
