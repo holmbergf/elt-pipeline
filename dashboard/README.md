@@ -1,9 +1,12 @@
-# NFL Matchup Board (Streamlit)
+# Matchup Board (Streamlit) — NFL + NCAAF
 
 Private, password-gated decision-support dashboard over the elt-pipeline
 semantic layer (`semantic_upcoming_matchups`, `semantic_team_season_form`,
-`semantic_game_results`). It presents statistics and market data for users
-to make their own decisions — it does not recommend bets.
+`semantic_game_results`). The sidebar Sport switcher gives NFL and NCAAF
+their own section with identical pages; each reads its own bucket's exports
+(`s3://nfl/...` / `s3://ncaaf/...`). The NCAAF Today cards show AP Top-25
+ranks. It presents statistics and market data for users to make their own
+decisions — it does not recommend bets.
 
 Pages: **Today** (today's games: lines, consensus, side-by-side form),
 **Team Form** (season explorer), **Trends** (per-team scoring/totals trends).
@@ -22,7 +25,7 @@ DuckDB reads the published Parquet exports from R2:
 3. In the app's Settings → Secrets, paste the keys from
    `.streamlit/secrets.toml.example` with real values:
    `app_password`, `r2_access_key_id`, `r2_secret_access_key`,
-   `r2_s3_host`, `r2_bucket`.
+   `r2_s3_host`, `r2_bucket`, `r2_bucket_ncaaf`.
    Use a read-only R2 token (Object Read) for the app.
 4. Deploy. The repo stays private; the app additionally requires the
    password.

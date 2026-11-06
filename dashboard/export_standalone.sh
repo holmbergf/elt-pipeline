@@ -7,9 +7,11 @@ mkdir -p "$DEST/.streamlit"
 cp dashboard/streamlit_app.py dashboard/data.py dashboard/requirements.txt "$DEST/"
 cp dashboard/.streamlit/secrets.toml.example dashboard/.streamlit/config.toml "$DEST/.streamlit/"
 cat > "$DEST/README.md" <<'MD'
-# NFL Matchup Board
+# Matchup Board (NFL + NCAAF)
 
 Private-use Streamlit dashboard over the elt-pipeline semantic layer.
+Sidebar switches between the NFL and NCAAF sections (same pages, each
+sport reads its own R2 bucket: `nfl` / `ncaaf`).
 Reads published Parquet exports from Cloudflare R2 (read-only keys in
 Streamlit secrets). Presents statistics and market data for users to make
 their own decisions; it does not recommend bets.
