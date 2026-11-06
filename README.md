@@ -68,7 +68,7 @@ elt-pipeline/
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `nfl-ingest` | Sun 07:00, Mon 13:00, Thu 13:00 Pacific (15:00/21:00 UTC) + manual | `elt-ingest all` → `dbt build --target prod` → publish warehouse tables; ahead of game days |
+| `ingest` | NFL Sun 07:00, Mon 13:00, Thu 13:00 Pacific; NCAAF Fri + Sat 07:00 Pacific (15:00/21:00 UTC) + manual | `elt-ingest all` (NFL + `--sport ncaaf`) → `dbt build --target prod` → publish warehouse tables; ahead of game days |
 | `ci/data-integration` | Changes under `data-integration/**` | pytest, byte-compile, CLI smoke |
 | `ci/dbt` | Changes under `dbt-transform/**` | Slim dbt build (`state:modified+` vs prod manifest) + data tests on 10-row mock fixtures |
 | `ci/infra` | Changes under `infra/**`, PR comments | fmt/validate; `.deploy` / `.deploy noop` IssueOps via branch-deploy |

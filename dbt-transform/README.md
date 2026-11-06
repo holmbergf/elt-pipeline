@@ -61,5 +61,5 @@ exceeds ~10 minutes.
 
 `ci/dbt` (path-filtered to `dbt-transform/**`) runs a slim build
 (`state:modified+` against the production manifest from the latest
-`nfl-ingest` run, full-build fallback) plus all data tests, against the
+`ingest` run, full-build fallback) plus all data tests, against the
 10-row mock raw fixtures in `tests/fixtures/`.

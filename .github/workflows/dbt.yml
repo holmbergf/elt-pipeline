@@ -29,7 +29,7 @@ jobs:
       - name: Install dbt
         run: pip install dbt-duckdb duckdb
       # Slim selection is computed against the production manifest from the
-      # latest successful nfl-ingest run and reported below, but the build
+      # latest successful ingest run and reported below, but the build
       # itself is full: CI DuckDB is ephemeral (no prod schema to clone), and
       # slim selection kept producing false failures when singular tests
       # referenced tables outside the selection. The full fixture build
@@ -40,7 +40,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p prod-state
-          run_id=$(gh run list --workflow nfl-ingest.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId' || true)
+          run_id=$(gh run list --workflow ingest.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId' || true)
           if [ -n "$run_id" ] && [ "$run_id" != "null" ]; then
             gh run download "$run_id" --name dbt-state --dir prod-state || true
           fi

@@ -26,7 +26,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: nfl-ingest
+  group: ingest
   cancel-in-progress: false
 
 jobs:
