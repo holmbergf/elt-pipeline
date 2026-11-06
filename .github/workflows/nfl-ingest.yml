@@ -9,7 +9,11 @@ on:
     - cron: "0 15 * * 0"
     - cron: "0 21 * * 1"
     - cron: "0 21 * * 4"
-    # Sat 07:00 PT: pre-Saturday college slate (NCAAF connector).
+    # Fri + Sat 07:00 PT: college games are mainly Fri/Sat, so the NCAAF
+    # connector gets a 07:00 PT run on both days (pre-slate). It also runs
+    # on the NFL triggers above (idempotent), which picks up Sat results
+    # on Sun 07:00 PT.
+    - cron: "0 15 * * 5"
     - cron: "0 15 * * 6"
   workflow_dispatch:
     inputs:
