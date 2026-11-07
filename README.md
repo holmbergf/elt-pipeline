@@ -98,10 +98,10 @@ Workflows are path-filtered and independent: a dbt-only change runs only
 `ci/dbt`, etc.
 
 Terraform applies happen via the branch-deploy flow (`.deploy` on a PR,
-production environment). **Prerequisite:** the repo variable
-`TF_STATE_BACKEND_CONFIG` must point at a remote backend — state is
-currently local-only, and the deploy job deliberately refuses to apply
-against an empty runner-local state until that is configured.
+production environment). State is remote (S3 backend on R2, bucket
+`elt-tfstate`, config in `infra/backend.hcl`); the repo variable
+`TF_STATE_BACKEND_CONFIG` points the deploy job at it, and the job
+refuses to apply against an empty runner-local state if it is unset.
 
 ## Local development
 

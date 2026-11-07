@@ -38,10 +38,9 @@ jobs:
   # IssueOps deploys via github/branch-deploy:
   #   comment ".deploy"       -> terraform apply (production environment)
   #   comment ".deploy noop"  -> terraform plan only (dry run)
-  # Prerequisite for apply: remote state. State is currently local, so the
-  # deploy job fails loudly until TF_STATE_BACKEND_CONFIG is provided as a
-  # repository variable (e.g. an R2/S3 backend). It never runs apply against
-  # an empty local state in the runner.
+  # State is remote (R2 S3 backend, infra/backend.hcl). The deploy job
+  # still fails loudly if TF_STATE_BACKEND_CONFIG is not set as a
+  # repository variable; it never runs apply against empty runner-local state.
   branch-deploy:
     if: github.event_name == 'issue_comment'
     runs-on: ubuntu-latest
@@ -76,6 +75,8 @@ jobs:
           BACKEND: ${{ vars.TF_STATE_BACKEND_CONFIG }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TF_VAR_cloudflare_account_id: ${{ secrets.R2_ACCOUNT_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: terraform init -input=false -backend-config="$BACKEND"
       - name: Terraform plan (noop)
         if: steps.branch-deploy.outputs.continue == 'true' && steps.branch-deploy.outputs.noop == 'true'
@@ -83,6 +84,8 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TF_VAR_cloudflare_account_id: ${{ secrets.R2_ACCOUNT_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: terraform plan -input=false
       - name: Terraform apply
         if: steps.branch-deploy.outputs.continue == 'true' && steps.branch-deploy.outputs.noop != 'true'
@@ -90,4 +93,6 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TF_VAR_cloudflare_account_id: ${{ secrets.R2_ACCOUNT_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: terraform apply -input=false -auto-approve

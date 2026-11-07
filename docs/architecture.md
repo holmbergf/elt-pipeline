@@ -528,12 +528,16 @@ the production manifest and printed for information.
 
 Terraform in `infra/` is the only provisioning path (R2 buckets, Basin
 Catalogs). Applies go through the branch-deploy flow against the
-production environment, gated on a repo variable pointing at a remote
-state backend; until that variable is set, the deploy job deliberately
-refuses to apply against an ephemeral runner-local state rather than
-risk recreating resources. (The buckets/catalogs in production today
-were applied with a local state; moving state remote is a known,
-tracked follow-up — see §12.)
+production environment. State is remote: an S3 backend on R2 itself
+(bucket `elt-tfstate`, key `elt-pipeline/infra/terraform.tfstate`,
+native lockfile enabled; settings in `infra/backend.hcl`, credentials
+from the R2 keys). The state bucket is the one resource Terraform
+cannot create with remote state already in place, so it is provisioned
+by the tiny `infra/bootstrap/` module, applied once by hand with its
+own local state. The repo variable `TF_STATE_BACKEND_CONFIG=backend.hcl`
+points the deploy job at the backend config; the job still refuses to
+run if that variable disappears, rather than apply against an ephemeral
+runner-local state.
 
 ### 8.4 Secrets
 
@@ -654,9 +658,10 @@ models plus overwrite publishing make re-transformation converge.
 
 ## 12. Known limitations and future work
 
-- **Remote Terraform state** is not yet configured; the branch-deploy
-  apply gate stays closed until `TF_STATE_BACKEND_CONFIG` points at a
-  remote backend (§8.3).
+- **Bootstrap state is local**: the `elt-tfstate` bucket's own
+  single-resource state lives in `infra/bootstrap/` (gitignored); the
+  main configuration's state is remote (§8.3). Local copies of the
+  pre-migration state are not used by Terraform anymore.
 - **GitHub cron has no DST awareness**; Pacific run times drift one
   hour during PDT (§8.1).
 - **Covers is a scrape**: layout changes will fail market jobs loudly

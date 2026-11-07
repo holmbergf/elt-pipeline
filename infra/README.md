@@ -4,7 +4,8 @@ This directory contains Terraform definitions for provisioning Cloudflare infras
 
 ## Resources Provisioned
 
-- **Cloudflare R2 Bucket**: `nfl` (plus its Basin Catalog, `cloudflare_r2_data_catalog.nfl`)
+- **Cloudflare R2 Buckets**: `nfl` and `ncaaf`, each with its Basin Catalog (`cloudflare_r2_data_catalog.*`)
+- **State bucket**: `elt-tfstate` (provisioned separately by `bootstrap/`, see below)
 
 ---
 
@@ -39,9 +40,12 @@ This directory contains Terraform definitions for provisioning Cloudflare infras
    ```
    Set your `cloudflare_account_id` in `terraform.tfvars`.
 
-3. **Initialize Terraform**:
+3. **Initialize Terraform** (remote state in R2; the state bucket is
+   created once by the bootstrap module):
    ```bash
-   terraform init
+   terraform -chdir=bootstrap init && terraform -chdir=bootstrap apply  # once only
+   export AWS_ACCESS_KEY_ID=<R2_ACCESS_KEY_ID> AWS_SECRET_ACCESS_KEY=<R2_SECRET_ACCESS_KEY>
+   terraform init -backend-config=backend.hcl
    ```
 
 4. **Review Execution Plan**:
@@ -53,3 +57,5 @@ This directory contains Terraform definitions for provisioning Cloudflare infras
    ```bash
    terraform apply
    ```
+   In production, applies run via GitHub branch-deploy (`.deploy` on a
+   PR) against this same remote state; see the `ci/infra` workflow.
