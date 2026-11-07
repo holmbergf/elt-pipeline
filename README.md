@@ -7,6 +7,10 @@ Iceberg tables in Basin Catalog.
 Production entry point is GitHub Actions — the pipeline runs autonomously on
 schedule (see [Autonomous operation](#autonomous-operation)).
 
+For the full design — ingestion, R2 layout, Basin Catalog/Iceberg, dbt
+layers, publishing, orchestration, dashboard, and why each technology was
+chosen — see [docs/architecture.md](docs/architecture.md).
+
 ## Architecture
 
 ```text
