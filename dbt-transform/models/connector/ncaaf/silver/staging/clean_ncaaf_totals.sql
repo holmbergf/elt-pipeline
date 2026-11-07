@@ -40,6 +40,13 @@ mapped as (
     from split_teams s
     left join team_lookup a on s.away_team_code = a.team_code
     left join team_lookup h on s.home_team_code = h.team_code
+),
+
+deduped as (
+    select *, row_number() over (
+        partition by game_date, least(home_team_name, away_team_name), greatest(home_team_name, away_team_name)
+        order by timestamp_imported desc) as rn
+    from mapped
 )
 
 select
@@ -59,5 +66,5 @@ select
         else 'Under'
     end as consensus_total_underdog,
     timestamp_imported
-from mapped
-where over_under_line != 0
+from deduped
+where rn = 1 and over_under_line != 0

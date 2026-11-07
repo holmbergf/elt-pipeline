@@ -47,12 +47,16 @@ def parse_espn_events(payload: dict, season: int) -> list[dict]:
         hs, aws = score(home), score(away)
         hname, aname = home["team"]["displayName"], away["team"]["displayName"]
         winner = hname if (hs is not None and hs >= aws) else aname
+        # Sports date = US Eastern calendar day of kickoff. ESPN timestamps
+        # are UTC; slicing the UTC date puts evening kickoffs on the next
+        # day and breaks the join to Covers (US-dated) market pages.
+        kickoff_et = pd.Timestamp(ev["date"]).tz_convert("America/New_York")
         rows.append({
-            "date": str(ev["date"])[:10],
-            "time": str(ev["date"])[11:16],
+            "date": kickoff_et.strftime("%Y-%m-%d"),
+            "time": kickoff_et.strftime("%H:%M"),
             "season": season,
             "week": str(ev.get("week", {}).get("number", "")) if isinstance(ev.get("week"), dict) else str(ev.get("week", "")),
-            "day": pd.Timestamp(ev["date"]).strftime("%a"),
+            "day": kickoff_et.strftime("%a"),
             "home_team": hname,
             "away_team": aname,
             "home_score": hs,

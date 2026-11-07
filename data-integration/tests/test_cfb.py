@@ -56,3 +56,11 @@ def test_cfb_settings_point_at_ncaaf_catalog():
     assert c.basin_namespace == "ncaaf"
     assert c.basin_catalog_uri.endswith("/ncaaf")
     assert c.basin_warehouse == "acct_ncaaf"
+
+
+def test_evening_kickoff_uses_eastern_date():
+    ev = _event()
+    ev["date"] = "2026-11-08T00:30Z"  # Sat 7:30pm ET kickoff
+    rows = parse_espn_events({"events": [ev]}, 2026)
+    assert rows[0]["date"] == "2026-11-07"
+    assert rows[0]["day"] == "Sat"

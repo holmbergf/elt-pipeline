@@ -4,15 +4,28 @@
 ) }}
 
 -- ESPN names are canonical (no mapping needed). Raw is append-only, so
--- dedupe to one row per game, preferring the scored version.
-with deduped as (
+-- dedupe to one row per game, preferring the scored version. The boxscore
+-- (ESPN event id) dedupe runs first: it collapses legacy UTC-dated rows
+-- with their Eastern-dated corrections for the same event.
+with by_event as (
+    select
+        *,
+        row_number() over (
+            partition by boxscore
+            order by timestamp_imported desc
+        ) as ern
+    from {{ ref('stg_ncaaf_games') }}
+),
+
+deduped as (
     select
         *,
         row_number() over (
             partition by game_date, least(home_team, away_team), greatest(home_team, away_team)
             order by (home_score is not null) desc, timestamp_imported desc
         ) as rn
-    from {{ ref('stg_ncaaf_games') }}
+    from by_event
+    where ern = 1
 )
 
 select

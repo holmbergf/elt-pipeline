@@ -89,3 +89,39 @@ def test_load_today_joins_form(mirror, tmp_path):
     assert df.iloc[0]["home_record_display"] == "7-1-0"
     assert df.iloc[0]["away_win_pct"] == 0.88
     assert "home_spread_points" in df.columns and "totals_line_points" in df.columns
+
+
+def test_load_history_merges_scores_and_market(mirror, tmp_path):
+    base = tmp_path / "data_warehouse"
+    pd.DataFrame([{
+        "game_date": "2026-10-03", "season": 2026, "week": "6",
+        "home_team": "X", "away_team": "X", "home_score": 31, "away_score": 17,
+        "winner": "X", "totals_result": "Over", "spread_cover_side": "Home",
+    }]).to_parquet(base / "semantic" / "semantic_game_results.parquet", index=False)
+    (base / "silver").mkdir(parents=True, exist_ok=True)
+    pd.DataFrame([{
+        "game_date": "2026-10-03", "season": 2026, "home_team": "X", "away_team": "X",
+        "home_spread": -3.5, "away_spread": 3.5, "spread_line": 3.5,
+        "spread_home_consensus_pct": 0.6, "spread_away_consensus_pct": 0.4,
+        "market_favorite_team": "X", "over_under_line": 55.5,
+        "over_consensus_pct": 0.5, "under_consensus_pct": 0.5,
+    }]).to_parquet(base / "silver" / "fct_nfl_betting_settled.parquet", index=False)
+    mirror.load_history.clear()
+    df = mirror.load_history("nfl")
+    assert df.iloc[0]["home_score"] == 31
+    assert df.iloc[0]["home_consensus_pct"] == 0.6
+
+
+def test_pair_colors_distinguishes_similar_blues():
+    # Exec only the pure color helpers from the app (importing the app runs Streamlit).
+    src = open(os.path.join(os.path.dirname(__file__), "..", "streamlit_app.py")).read()
+    ns: dict = {}
+    exec(src[src.index("TEAM_COLORS = {") : src.index("def compare_row")], ns)
+    ca, ch = ns["pair_colors"]("Cowboys", "Colts")
+
+    def rgb(h):
+        h = h.lstrip("#")
+        return tuple(int(h[i : i + 2], 16) for i in (0, 2, 4))
+
+    dist = sum((a - b) ** 2 for a, b in zip(rgb(ca), rgb(ch))) ** 0.5
+    assert dist >= 85
