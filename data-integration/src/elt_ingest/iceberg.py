@@ -93,21 +93,56 @@ def ensure_tables(settings: Settings) -> list[str]:
     return created
 
 
-def append_dataframe(settings: Settings, dataset: str, df) -> None:
-    """Append a pandas frame to its Iceberg table (schema-aligned, extra cols dropped)."""
-    import pyarrow as pa
+def align_to_schema(df, schema: pa.Schema) -> pa.Table:
+    """Align a pandas frame to an Iceberg schema, driven by FIELD TYPES.
 
-    schema = _schemas_for(settings)[dataset]
+    String fields get str() values (so float scores like 35.0 stay text in
+    schemas that declare them as strings — casting them to Int64 by column
+    name crashed appends with ArrowInvalid); integer fields are coerced
+    via to_numeric so floats/strings land as ints or nulls.
+    """
     aligned = df.reindex(columns=schema.names).copy()
     for field in schema:
         if pa.types.is_string(field.type):
             aligned[field.name] = aligned[field.name].map(lambda v: None if pd.isna(v) else str(v))
-    for int_col in ("season", "home_score", "away_score", "home_rank", "away_rank", "points_winner", "points_loser"):
-        if int_col in schema.names:
-            aligned = aligned.assign(**{int_col: aligned[int_col].astype("Int64")})
-    table = pa.Table.from_pandas(aligned, schema=schema, preserve_index=False)
+        elif pa.types.is_integer(field.type):
+            aligned[field.name] = pd.to_numeric(aligned[field.name], errors="coerce").astype("Int64")
+        elif pa.types.is_boolean(field.type):
+            aligned[field.name] = aligned[field.name].astype("boolean")
+    return pa.Table.from_pandas(aligned, schema=schema, preserve_index=False)
+
+
+def _is_transient(exc: Exception) -> bool:
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    if status in (429, 500, 502, 503, 504):
+        return True
+    return exc.__class__.__name__ in ("ConnectionError", "Timeout", "ConnectTimeout", "ReadTimeout")
+
+
+def with_retries(fn, *, attempts: int = 4, base_delay: float = 5.0, label: str = "catalog write"):
+    """Retry transient catalog failures (Cloudflare 429/5xx, connection
+    errors) with exponential backoff. Non-transient errors raise at once."""
+    import time
+
+    for attempt in range(1, attempts + 1):
+        try:
+            return fn()
+        except Exception as exc:
+            if attempt == attempts or not _is_transient(exc):
+                raise
+            delay = base_delay * (2 ** (attempt - 1))
+            log.warning("%s failed (attempt %d/%d, %s); retrying in %.0fs",
+                        label, attempt, attempts, type(exc).__name__, delay)
+            time.sleep(delay)
+
+
+def append_dataframe(settings: Settings, dataset: str, df) -> None:
+    """Append a pandas frame to its Iceberg table (schema-aligned, extra cols dropped)."""
+    schema = _schemas_for(settings)[dataset]
+    table = align_to_schema(df, schema)
     catalog = connect(settings)
-    catalog.load_table((settings.basin_namespace, _tables_for(settings, dataset)[dataset])).append(table)
+    iceberg_table = catalog.load_table((settings.basin_namespace, _tables_for(settings, dataset)[dataset]))
+    with_retries(lambda: iceberg_table.append(table), label=f"iceberg append {dataset}")
 
 
 if __name__ == "__main__":

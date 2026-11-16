@@ -53,7 +53,17 @@ jobs:
           BASIN_CATALOG_URI: ${{ secrets.BASIN_CATALOG_URI }}
           BASIN_WAREHOUSE: ${{ secrets.BASIN_WAREHOUSE }}
           BASIN_TOKEN: ${{ secrets.BASIN_TOKEN }}
-        run: elt-ingest all --mode "${{ inputs.mode || 'incremental' }}"
+
+          retry() { # idempotent jobs: safe to re-run the whole step
+            local n=1
+            while true; do
+              "$@" && return 0
+              [ $n -ge 3 ] && return 1
+              echo "attempt $n failed; retrying in $((n * 30))s"
+              sleep $((n * 30)); n=$((n + 1))
+            done
+          }
+          retry elt-ingest all --mode "${{ inputs.mode || 'incremental' }}"
       - name: Run NCAAF ingestion (ESPN games -> Covers spreads -> totals)
         env:
           STORAGE_BACKEND: r2
@@ -64,7 +74,17 @@ jobs:
           BASIN_CATALOG_URI: ${{ secrets.BASIN_CATALOG_URI }}
           BASIN_WAREHOUSE: ${{ secrets.BASIN_WAREHOUSE }}
           BASIN_TOKEN: ${{ secrets.BASIN_TOKEN }}
-        run: elt-ingest --sport ncaaf all --mode "${{ inputs.mode || 'incremental' }}"
+
+          retry() { # idempotent jobs: safe to re-run the whole step
+            local n=1
+            while true; do
+              "$@" && return 0
+              [ $n -ge 3 ] && return 1
+              echo "attempt $n failed; retrying in $((n * 30))s"
+              sleep $((n * 30)); n=$((n + 1))
+            done
+          }
+          retry elt-ingest --sport ncaaf all --mode "${{ inputs.mode || 'incremental' }}"
       - name: dbt build (prod) and publish warehouse tables
         working-directory: dbt-transform
         env:

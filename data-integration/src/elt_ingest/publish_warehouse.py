@@ -82,6 +82,8 @@ def publish(db_path: Path, settings: Settings | None = None, sport: str = "nfl")
     catalog = connect(s)
     con = duckdb.connect(str(db_path), read_only=True)
     counts: dict[str, int] = {}
+    from .iceberg import with_retries
+
     for model, (layer, table_name) in models.items():
         df = con.execute(f'SELECT * FROM main."{model}"').fetchdf()
         # DuckDB/pyarrow type hygiene: timestamps -> string-safe, ints stay ints.
@@ -91,21 +93,27 @@ def publish(db_path: Path, settings: Settings | None = None, sport: str = "nfl")
             if pa.types.is_null(field.type):
                 arrow = arrow.set_column(i, field.with_type(pa.string()), arrow.column(i).cast(pa.string()))
         ident = (layer, table_name)
-        catalog.create_namespace_if_not_exists(layer)
-        if catalog.table_exists(ident):
-            existing = {f.name: str(f.field_type) for f in catalog.load_table(ident).schema().fields}
-            new = {n: str(arrow.field(n).type) for n in arrow.column_names}
-            if existing != new:
-                # Publisher is a full overwrite; recreate on schema change.
-                catalog.drop_table(ident)
-        if not catalog.table_exists(ident):
-            # Unpartitioned at this scale (~10k rows); Basin Catalog maintenance
-            # (compaction) is enabled at the catalog level. Revisit if a fact
-            # table passes ~1M rows.
-            catalog.create_table(ident, schema=arrow.schema)
-        table = catalog.load_table(ident)
-        table.overwrite(arrow)
-        counts[model] = table.scan().to_arrow().num_rows
+
+        def _publish_to_catalog() -> int:
+            catalog.create_namespace_if_not_exists(layer)
+            if catalog.table_exists(ident):
+                existing = {f.name: str(f.field_type) for f in catalog.load_table(ident).schema().fields}
+                new = {n: str(arrow.field(n).type) for n in arrow.column_names}
+                if existing != new:
+                    # Publisher is a full overwrite; recreate on schema change.
+                    catalog.drop_table(ident)
+            if not catalog.table_exists(ident):
+                # Unpartitioned at this scale (~10k rows); Basin Catalog maintenance
+                # (compaction) is enabled at the catalog level. Revisit if a fact
+                # table passes ~1M rows.
+                catalog.create_table(ident, schema=arrow.schema)
+            table = catalog.load_table(ident)
+            table.overwrite(arrow)
+            return table.scan().to_arrow().num_rows
+
+        # Basin Catalog rate-limits bursts (HTTP 429); overwrite is
+        # idempotent, so retry the whole catalog step with backoff.
+        counts[model] = with_retries(_publish_to_catalog, label=f"publish {layer}.{table_name}")
         # Parquet export into the data_warehouse/ zone (same content, file form).
         buf = io.BytesIO()
         df.to_parquet(buf, index=False)
