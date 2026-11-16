@@ -502,6 +502,19 @@ Operational properties:
   Sunday morning without a dedicated trigger.
 - A concurrency group (`ingest`, `cancel-in-progress: false`) serializes
   runs so two publishes can never interleave.
+- **Transient-failure resilience is layered**, because the failure modes
+  observed in production were of two kinds. (a) *Basin Catalog rate
+  limits* (HTTP 429 bursts during publish): every catalog write —
+  raw appends and publish overwrites — goes through `with_retries`
+  (exponential backoff, 4 attempts) in `elt_ingest/iceberg.py`;
+  overwrites are idempotent so retrying is always safe. (b) *Any other
+  transient step failure* (source hiccups, network): the workflow wraps
+  both `elt-ingest` invocations in a shell `retry` (3 attempts) — safe
+  because ingestion writes are content-addressed. Non-transient errors
+  (schema/type bugs) fail immediately and loudly; retries never mask
+  them. A schema-alignment bug of exactly that kind (name-based integer
+  casts in the Iceberg append, broken by float scores) is covered by
+  `tests/test_iceberg_align.py`.
 - The dbt manifest is uploaded as the `dbt-state` artifact on success;
   `ci/dbt` consumes it for its (informational) slim-selection report.
 - Manual dispatch supports `incremental` (default) and `backfill`.
