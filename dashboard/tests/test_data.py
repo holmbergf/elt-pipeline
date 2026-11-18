@@ -119,6 +119,16 @@ def test_load_history_merges_scores_and_market(mirror, tmp_path):
     assert df.iloc[0]["home_consensus_pct"] == 0.6
 
 
+def test_game_axis_uses_integer_ticks():
+    # Exec only the axis helper from the app (importing the app runs Streamlit).
+    src = open(os.path.join(os.path.dirname(__file__), "..", "streamlit_app.py")).read()
+    ns: dict = {}
+    exec("import altair as alt\n" + src[src.index("def game_x") : src.index("def cpct")], ns)
+    axis = ns["game_x"]().to_dict()
+    assert axis["type"] == "quantitative" and axis["field"] == "game"
+    assert axis["axis"]["tickMinStep"] == 1 and axis["axis"]["format"] == "d"
+
+
 def test_pair_colors_distinguishes_similar_blues():
     # Exec only the pure color helpers from the app (importing the app runs Streamlit).
     src = open(os.path.join(os.path.dirname(__file__), "..", "streamlit_app.py")).read()

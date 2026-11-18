@@ -186,6 +186,11 @@ def compare_row(label: str, away_val, home_val, away_team: str, home_team: str) 
     )
 
 
+def game_x() -> alt.X:
+    """Game-number axis: whole games only, never fractional ticks."""
+    return alt.X("game:Q", title="Game #", axis=alt.Axis(format="d", tickMinStep=1))
+
+
 def cpct(x) -> str:
     """Percentage colored by value: green strong, pale green above 50%,
     amber 45-50%, red below 45%. For rates where higher reads better."""
@@ -477,7 +482,7 @@ def page_trends(sport: str = "nfl") -> None:
     chart = (
         alt.Chart(long)
         .mark_line(point=True)
-        .encode(x=alt.X("game", title="Game #"), y=alt.Y("points", title="Points"),
+        .encode(x=game_x(), y=alt.Y("points", title="Points"),
                 color="kind", tooltip=["game_date", "kind", "points"])
         .properties(height=260)
     )
@@ -486,10 +491,10 @@ def page_trends(sport: str = "nfl") -> None:
     totals_chart = (
         alt.Chart(played)
         .mark_line(point=True)
-        .encode(x=alt.X("game", title="Game #"), y=alt.Y("total_points", title="Points"),
+        .encode(x=game_x(), y=alt.Y("total_points", title="Points"),
                 tooltip=["game_date", "total_points", "totals_line_points"])
         .properties(height=220)
-    ) + alt.Chart(played).mark_line(strokeDash=[5, 4], color="#9db2c3").encode(x="game", y="totals_line_points")
+    ) + alt.Chart(played).mark_line(strokeDash=[5, 4], color="#9db2c3").encode(x=game_x(), y="totals_line_points")
     st.caption("Game total (solid) vs totals line (dashed)")
     st.altair_chart(totals_chart, width="stretch")
     st.dataframe(
