@@ -16,7 +16,7 @@ import streamlit as st
 
 TABLES = {
     "upcoming": "semantic/semantic_upcoming_matchups.parquet",
-    # Silver upcoming holds ALL future fixtures; the Today page filters to
+    # Silver upcoming holds ALL future fixtures; the Upcoming page filters to
     # the current date at read time (the semantic table is build-day only
     # and goes stale between pipeline runs).
     "upcoming_all": "silver/fct_{sport}_betting_upcoming.parquet",
@@ -106,17 +106,22 @@ def _join_form(df: pd.DataFrame, sport: str) -> pd.DataFrame:
     return df
 
 
+def season_option_label(season) -> str:
+    """Season picker label: the warehouse's season 0 aggregates all seasons."""
+    return "All seasons" if int(season) == 0 else str(int(season))
+
+
 @st.cache_data(ttl=3600, show_spinner="Loading upcoming games…")
-def load_today(sport: str = "nfl") -> pd.DataFrame:
+def load_upcoming(sport: str = "nfl") -> pd.DataFrame:
     """Future fixtures with season form joined, in the semantic column shape
-    the Today page renders. game_date is filtered by the caller."""
+    the Upcoming page renders. game_date is filtered by the caller."""
     return _join_form(_market_shape(load("upcoming_all", sport).copy()), sport)
 
 
 @st.cache_data(ttl=3600, show_spinner="Loading historical games…")
 def load_history(sport: str = "nfl") -> pd.DataFrame:
     """Played games (scores from the semantic results table) with market
-    context and season form joined, same shape as load_today plus scores."""
+    context and season form joined, same shape as load_upcoming plus scores."""
     res = load("results", sport)[
         ["game_date", "season", "week", "home_team", "away_team", "home_score",
          "away_score", "winner", "totals_result", "spread_cover_side",

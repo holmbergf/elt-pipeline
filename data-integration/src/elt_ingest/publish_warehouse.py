@@ -79,6 +79,17 @@ def publish(db_path: Path, settings: Settings | None = None, sport: str = "nfl")
         storage = get_storage(s, sport="ncaaf", bucket=s.ncaaf_bucket)
     else:
         storage = get_storage(s)
+    # Fail closed: with local storage the Parquet exports land on this
+    # machine's disk (an ephemeral CI runner) while the catalog publish
+    # below still logs success — the dashboard reads the Parquet and would
+    # silently serve stale data. Require the R2 backend explicitly.
+    if s.storage_backend != "r2":
+        raise RuntimeError(
+            "publish_warehouse requires STORAGE_BACKEND=r2 (with R2_ACCOUNT_ID, "
+            f"R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY set); got storage_backend={s.storage_backend!r}. "
+            "Refusing to write data_warehouse Parquet exports to local storage."
+        )
+    log.info("publishing %s Parquet exports to R2 bucket %s", sport, s.ncaaf_bucket if sport == "ncaaf" else s.r2_bucket)
     catalog = connect(s)
     con = duckdb.connect(str(db_path), read_only=True)
     counts: dict[str, int] = {}

@@ -90,6 +90,11 @@ jobs:
         env:
           RAW_BASE_PATH: s3://nfl/ingestion
           RAW_BASE_PATH_NCAAF: s3://ncaaf/ingestion
+          # Without these, publish_warehouse falls back to local storage and
+          # the dashboard's Parquet exports are silently written to the
+          # runner disk instead of R2 (publish_warehouse also guards this).
+          STORAGE_BACKEND: r2
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_S3_HOST: ${{ secrets.R2_S3_HOST }}

@@ -62,7 +62,7 @@ Covers NCAAF consensus┤  elt-ingest ─► └─ Iceberg nfl.raw_nfl_* / ncaa
   with `publish_warehouse --sport=ncaaf`.
 - **Dashboard** ([`dashboard/`](dashboard/)): password-gated Streamlit app
   with an NFL and an NCAAF section (sidebar sport switcher, same pages:
-  Today/next slate with a historical-games view, Team Form, Trends,
+  Upcoming/next slate with a historical-games view, Team Form, Trends,
   Consensus). It reads the published `data_warehouse/` Parquet exports from
   both buckets with a read-only R2 token (see
   [dashboard/README.md](dashboard/README.md)). Deployed on Streamlit
@@ -161,6 +161,6 @@ names are identical. See [`.env.example`](.env.example) for the full list.
   Covers market rows for FCS-vs-FCS games cannot join the FBS game feed
   and drop out in silver; a handful of Covers team codes (e.g. `GSU`) are
   mapped by best convention in the seed and may mis-join in rare cases.
-- The dashboard's Today page filters the silver upcoming fixtures to the
+- The dashboard's Upcoming page filters the silver upcoming fixtures to the
   current Pacific date at read time (next slate shown when idle), so it
   never displays a stale build-day game as "today".

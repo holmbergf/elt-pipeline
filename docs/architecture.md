@@ -573,7 +573,7 @@ A private, password-gated Streamlit app (`dashboard/`) presenting the
 semantic layer for human decision support — trends, form, and market
 context, with no bet recommendations (a deliberate product constraint:
 the app informs the user's own decisions). A sidebar sport switcher
-gives NFL and NCAAF identical sections (Today, Team Form, Trends,
+gives NFL and NCAAF identical sections (Upcoming, Team Form, Trends,
 Consensus) over their own buckets.
 
 ### 9.2 Data path, and why it is Parquet — not Iceberg
@@ -601,9 +601,9 @@ secrets (real keys live only in Streamlit's secret store).
 
 ### 9.3 Read-time semantics (two bugs that set the rules)
 
-- **"Today" is computed when the page loads, not when the warehouse was
+- **"Upcoming" is computed when the page loads, not when the warehouse was
   built.** The semantic upcoming table is filtered to its build day, so
-  the Today page reads the silver `fct_*_betting_upcoming` fixtures,
+  the Upcoming page reads the silver `fct_*_betting_upcoming` fixtures,
   joins form at read time, and filters to the current Pacific date —
   falling back to the next slate under its real date. A build-day game
   can therefore never be displayed as "today's" game on a later day.

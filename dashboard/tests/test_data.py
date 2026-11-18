@@ -2,7 +2,7 @@
 
 Uses the local-mirror layout (LOCAL_WAREHOUSE_DIR) so no R2 credentials are
 needed: <dir>/data_warehouse/... for NFL, <dir>/ncaaf/data_warehouse/... for
-NCAAF. Guards the NCAAF-section change that broke the deployed Today page:
+NCAAF. Guards the NCAAF-section change that broke the deployed Upcoming page:
 load(table, sport) must resolve each sport to its own location.
 """
 
@@ -73,7 +73,14 @@ def test_games_for_day_today_and_empty():
     assert out.empty
 
 
-def test_load_today_joins_form(mirror, tmp_path):
+def test_season_option_label():
+    import data
+
+    assert data.season_option_label(0) == "All seasons"
+    assert data.season_option_label(2026) == "2026"
+
+
+def test_load_upcoming_joins_form(mirror, tmp_path):
     base = tmp_path / "data_warehouse"
     (base / "silver").mkdir(parents=True, exist_ok=True)
     pd.DataFrame([{
@@ -84,8 +91,8 @@ def test_load_today_joins_form(mirror, tmp_path):
         "market_favorite_team": "X", "over_under_line": 55.5,
         "over_consensus_pct": 0.5, "under_consensus_pct": 0.5,
     }]).to_parquet(base / "silver" / "fct_nfl_betting_upcoming.parquet", index=False)
-    mirror.load_today.clear()
-    df = mirror.load_today("nfl")
+    mirror.load_upcoming.clear()
+    df = mirror.load_upcoming("nfl")
     assert df.iloc[0]["home_record_display"] == "7-1-0"
     assert df.iloc[0]["away_win_pct"] == 0.88
     assert "home_spread_points" in df.columns and "totals_line_points" in df.columns

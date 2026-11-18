@@ -4,11 +4,11 @@ Private, password-gated decision-support dashboard over the elt-pipeline
 semantic layer (`semantic_upcoming_matchups`, `semantic_team_season_form`,
 `semantic_game_results`). The sidebar Sport switcher gives NFL and NCAAF
 their own section with identical pages; each reads its own bucket's exports
-(`s3://nfl/...` / `s3://ncaaf/...`). The NCAAF Today cards show AP Top-25
+(`s3://nfl/...` / `s3://ncaaf/...`). The NCAAF Upcoming cards show AP Top-25
 ranks. It presents statistics and market data for users to make their own
 decisions — it does not recommend bets.
 
-Pages: **Today** (today's games: lines, consensus, side-by-side form),
+Pages: **Upcoming** (today/next slate: lines, consensus, side-by-side form),
 **Team Form** (season explorer), **Trends** (per-team scoring/totals trends).
 
 ## Data path

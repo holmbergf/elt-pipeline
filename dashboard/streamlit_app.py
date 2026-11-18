@@ -10,7 +10,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from data import games_for_day, load, load_history, load_today
+from data import games_for_day, load, load_history, load_upcoming, season_option_label
 
 st.set_page_config(page_title="Matchup Board", page_icon="🏈", layout="wide")
 
@@ -301,12 +301,12 @@ def render_matchup_card(g, sport: str, played: bool = False) -> None:
                "history panel are colored by value (green ≥55%, pale green ≥50%, amber 45–50%, red <45%) — always check n=")
 
 
-def page_today(sport: str = "nfl") -> None:
-    st.header("Today's games")
+def page_upcoming(sport: str = "nfl") -> None:
+    st.header("Upcoming games")
     from datetime import datetime
     from zoneinfo import ZoneInfo
 
-    mode = st.radio("View", ["Today / next slate", "Historical games"], horizontal=True, label_visibility="collapsed")
+    mode = st.radio("View", ["Upcoming slate", "Historical games"], horizontal=True, label_visibility="collapsed")
     if mode == "Historical games":
         hist = load_history(sport)
         if hist.empty:
@@ -327,7 +327,7 @@ def page_today(sport: str = "nfl") -> None:
         return
 
     today = datetime.now(ZoneInfo("America/Los_Angeles")).date()
-    df, shown_date, is_today = games_for_day(load_today(sport), today)
+    df, shown_date, is_today = games_for_day(load_upcoming(sport), today)
     if df.empty:
         sched = "Fri / Sat, Pacific" if sport == "ncaaf" else "Sun / Mon / Thu, Pacific"
         st.info(f"No games scheduled today. The board refreshes on the pipeline schedule ({sched}).")
@@ -368,7 +368,7 @@ def page_consensus(sport: str = "nfl") -> None:
     bands = load("spread_bands", sport)
     latest = int(bands["season"].max())
     seasons_avail = [latest, 0] + sorted([int(s) for s in bands["season"].unique() if s not in (0, latest)], reverse=True)
-    season_pick = st.segmented_control("Season (0 = all seasons)", seasons_avail, default=latest)
+    season_pick = st.segmented_control("Season", seasons_avail, default=latest, format_func=season_option_label)
 
     league = bands[(bands["scope"] == "League") & (bands["season"] == season_pick)]
     tab_fav, tab_dog, tab_tot, tab_line = st.tabs(["Favorites", "Underdogs", "Totals", "By the line"])
@@ -513,5 +513,5 @@ st.caption(
     "no bet recommendations. Lines move; verify before acting."
 )
 
-page = st.sidebar.radio("Page", ["Today", "Team Form", "Trends", "Consensus"])
-{"Today": page_today, "Team Form": page_form, "Trends": page_trends, "Consensus": page_consensus}[page](sport)
+page = st.sidebar.radio("Page", ["Upcoming", "Team Form", "Trends", "Consensus"])
+{"Upcoming": page_upcoming, "Team Form": page_form, "Trends": page_trends, "Consensus": page_consensus}[page](sport)
