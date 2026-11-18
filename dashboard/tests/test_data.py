@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 def mirror(tmp_path, monkeypatch):
     import data
 
-    data.load.clear()
+    data.clear_caches()
     for sub in ("", "ncaaf/"):
         d = tmp_path / sub / "data_warehouse" / "semantic"
         d.mkdir(parents=True)
@@ -42,14 +42,28 @@ def test_load_ncaaf_reads_ncaaf_subdir(mirror, tmp_path):
     # Distinct content under the ncaaf mirror proves the sport path is used.
     p = tmp_path / "ncaaf" / "data_warehouse" / "semantic" / "semantic_team_season_form.parquet"
     pd.DataFrame({"team_name": ["Y"], "season": [2026]}).to_parquet(p, index=False)
-    mirror.load.clear()
+    mirror.clear_caches()
     df = mirror.load("form", "ncaaf")
     assert df["team_name"].tolist() == ["Y"]
 
 
+def test_load_busts_cache_when_warehouse_version_changes(mirror, tmp_path):
+    # A publish rewrites the semantic tables; the version stamp (row counts)
+    # must key the hour-long cache so pre-publish records never linger.
+    base = tmp_path / "data_warehouse" / "semantic"
+    pd.DataFrame({"x": [1]}).to_parquet(base / "semantic_game_results.parquet", index=False)
+    mirror.clear_caches()
+    assert len(mirror.load("form")) == 1
+    form = pd.read_parquet(base / "semantic_team_season_form.parquet")
+    pd.concat([form, form.assign(team_name="Z")]).to_parquet(
+        base / "semantic_team_season_form.parquet", index=False)
+    mirror._warehouse_version.clear()  # simulate the 60s probe expiring
+    assert len(mirror.load("form")) == 2
+
+
 def test_load_failure_surfaces_sanitized_error(mirror, monkeypatch):
     monkeypatch.setenv("LOCAL_WAREHOUSE_DIR", "/nonexistent-dir")
-    mirror.load.clear()
+    mirror.clear_caches()
     with pytest.raises(RuntimeError, match="Failed to load form"):
         mirror.load("form", "ncaaf")
 
@@ -91,7 +105,7 @@ def test_load_upcoming_joins_form(mirror, tmp_path):
         "market_favorite_team": "X", "over_under_line": 55.5,
         "over_consensus_pct": 0.5, "under_consensus_pct": 0.5,
     }]).to_parquet(base / "silver" / "fct_nfl_betting_upcoming.parquet", index=False)
-    mirror.load_upcoming.clear()
+    mirror.clear_caches()
     df = mirror.load_upcoming("nfl")
     assert df.iloc[0]["home_record_display"] == "7-1-0"
     assert df.iloc[0]["away_win_pct"] == 0.88
@@ -113,7 +127,7 @@ def test_load_history_merges_scores_and_market(mirror, tmp_path):
         "market_favorite_team": "X", "over_under_line": 55.5,
         "over_consensus_pct": 0.5, "under_consensus_pct": 0.5,
     }]).to_parquet(base / "silver" / "fct_nfl_betting_settled.parquet", index=False)
-    mirror.load_history.clear()
+    mirror.clear_caches()
     df = mirror.load_history("nfl")
     assert df.iloc[0]["home_score"] == 31
     assert df.iloc[0]["home_consensus_pct"] == 0.6
