@@ -87,6 +87,18 @@ def test_games_for_day_today_and_empty():
     assert out.empty
 
 
+def test_all_season_pickers_use_all_seasons_label():
+    # Every season control on the board (Upcoming/Historical, Team Form,
+    # Trends, Consensus) must route through season_option_label so a
+    # season 0 can only ever render as "All seasons".
+    src = open(os.path.join(os.path.dirname(__file__), "..", "streamlit_app.py")).read()
+    season_controls = [ln for ln in src.splitlines()
+                       if ("segmented_control(\"Season" in ln or "selectbox(\"Season\"" in ln)]
+    assert len(season_controls) == 4
+    assert all("format_func=season_option_label" in ln for ln in season_controls)
+    assert "(0 = all seasons)" not in src
+
+
 def test_season_option_label():
     import data
 

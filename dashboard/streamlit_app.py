@@ -319,7 +319,7 @@ def page_upcoming(sport: str = "nfl") -> None:
             st.info("No historical games loaded.")
             return
         seasons = sorted(hist["season"].unique(), reverse=True)
-        season = st.selectbox("Season", seasons)
+        season = st.selectbox("Season", seasons, format_func=season_option_label)
         pool = hist[hist["season"] == season]
         dates = sorted(pool["game_date"].unique(), reverse=True)
         day = st.selectbox("Game date", dates, format_func=lambda d: f"{d:%A, %B %-d, %Y}")
@@ -420,7 +420,7 @@ def page_form(sport: str = "nfl") -> None:
     st.header("Team form")
     form = load("form", sport)
     seasons = sorted(form["season"].unique(), reverse=True)
-    season = st.segmented_control("Season", seasons, default=seasons[0])
+    season = st.segmented_control("Season", seasons, default=seasons[0], format_func=season_option_label)
     d = form[form["season"] == season].sort_values("season_rank")
     st.dataframe(
         d,
@@ -464,7 +464,7 @@ def page_trends(sport: str = "nfl") -> None:
     form = load("form", sport)
     team = st.selectbox("Team", sorted(form["team_name"].unique()))
     seasons = sorted(res["season"].unique(), reverse=True)
-    season = st.segmented_control("Season ", seasons, default=seasons[0])
+    season = st.segmented_control("Season ", seasons, default=seasons[0], format_func=season_option_label)
     played = res[(res["season"] == season) & ((res["home_team"] == team) | (res["away_team"] == team))].copy()
     if played.empty:
         st.info("No played games for that selection.")
