@@ -187,8 +187,9 @@ def compare_row(label: str, away_val, home_val, away_team: str, home_team: str) 
 
 
 def game_x() -> alt.X:
-    """Game-number axis: whole games only, never fractional ticks."""
-    return alt.X("game:Q", title="Game #", axis=alt.Axis(format="d", tickMinStep=1))
+    """Game-number axis as ordinal categories: whole games only, so the
+    axis can never place fractional ticks (a team can't play 1.2 games)."""
+    return alt.X("game:O", title="Game #")
 
 
 def cpct(x) -> str:

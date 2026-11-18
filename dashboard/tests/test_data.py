@@ -125,8 +125,7 @@ def test_game_axis_uses_integer_ticks():
     ns: dict = {}
     exec("import altair as alt\n" + src[src.index("def game_x") : src.index("def cpct")], ns)
     axis = ns["game_x"]().to_dict()
-    assert axis["type"] == "quantitative" and axis["field"] == "game"
-    assert axis["axis"]["tickMinStep"] == 1 and axis["axis"]["format"] == "d"
+    assert axis["type"] == "ordinal" and axis["field"] == "game"
 
 
 def test_pair_colors_distinguishes_similar_blues():
