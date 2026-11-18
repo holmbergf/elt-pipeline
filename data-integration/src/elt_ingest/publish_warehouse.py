@@ -20,7 +20,6 @@ import logging
 import sys
 from pathlib import Path
 
-import duckdb
 import pandas as pd
 import pyarrow as pa
 
@@ -91,6 +90,8 @@ def publish(db_path: Path, settings: Settings | None = None, sport: str = "nfl")
         )
     log.info("publishing %s Parquet exports to R2 bucket %s", sport, s.ncaaf_bucket if sport == "ncaaf" else s.r2_bucket)
     catalog = connect(s)
+    import duckdb
+
     con = duckdb.connect(str(db_path), read_only=True)
     counts: dict[str, int] = {}
     from .iceberg import with_retries

@@ -207,9 +207,14 @@ class StateStore:
         return dates[-1] if dates else None
 
     def covered_dates(self, dataset: str) -> set[str]:
+        # A date only counts as covered by a scrape made on or after it:
+        # Covers pages return neighbouring dates' matchups, so an early
+        # scrape can claim a future date from a partial page (e.g. 3 of 55
+        # Saturday games) and the date would never be scraped in full.
         dates: set[str] = set()
         for m in self.manifests(dataset):
-            dates.update(m.get("covered_dates") or [])
+            written = str(m.get("written_at") or "")[:10]
+            dates.update(d for d in (m.get("covered_dates") or []) if written >= d)
         return dates
 
     def missing_dates(self, dataset: str, since_days: int | None = None) -> list[str]:

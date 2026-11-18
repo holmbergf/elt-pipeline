@@ -46,6 +46,28 @@ def test_write_is_partitioned_idempotent_and_stateful(tmp_path):
     assert state.missing_dates("spreads") == ["2025-01-05"]
 
 
+def test_early_partial_scrape_does_not_cover_future_date(tmp_path):
+    # Covers pages bleed neighbouring dates: a Nov 6 scrape claiming
+    # Nov 14 (partial page) must not mark Nov 14 covered; a scrape made
+    # on the day itself must.
+    import json
+
+    storage = LocalStorage(tmp_path)
+    games = pd.DataFrame([{"matchup": "NCAAF A B", "date": "2026-11-14", "event_date": "2026-11-14"}])
+    write_dataset(storage, games, "games", source="test")
+    state = StateStore(storage)
+
+    def manifest(dataset, run, written, covered):
+        body = {"run_id": run, "written_at": written, "covered_dates": covered,
+                "keys": [], "skipped_keys": [], "rows": 1}
+        storage.put_bytes(f"ingestion/_manifests/nfl/{dataset}/{run}.json", json.dumps(body).encode())
+
+    manifest("spreads", "early", "2026-11-06T20:41:58+00:00", ["2026-11-14"])
+    assert state.missing_dates("spreads") == ["2026-11-14"]
+    manifest("spreads", "gameday", "2026-11-14T19:44:50+00:00", ["2026-11-14"])
+    assert state.missing_dates("spreads") == []
+
+
 def test_local_settings_backend(tmp_path, monkeypatch):
     monkeypatch.setenv("STORAGE_BACKEND", "local")
     monkeypatch.setenv("LOCAL_DATA_DIR", str(tmp_path))
