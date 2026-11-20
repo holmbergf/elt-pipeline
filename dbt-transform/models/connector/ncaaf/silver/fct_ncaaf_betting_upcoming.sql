@@ -7,8 +7,13 @@ with games as (
     select * from {{ ref('clean_ncaaf_games') }}
     -- Upcoming means future: a past-dated scoreless game is a stale preview
     -- row, not a fixture. (Regression: Feb 2026 Super Bowl preview leaked in.)
+    -- Compare against the US Eastern sports date (with a day's grace for
+    -- late finishes), never UTC current_date: CI builds run in UTC, where
+    -- the date rolls over at 19:00 ET and tonight's game would be dropped
+    -- as "past" before kickoff. The dashboard filters by Pacific date at
+    -- read time, so keeping a just-finished game here is harmless.
     where (home_score is null or away_score is null)
-      and game_date >= current_date
+      and game_date >= cast(current_timestamp at time zone 'America/New_York' as date) - 1
 ),
 
 spreads as (
