@@ -116,7 +116,14 @@ def _is_transient(exc: Exception) -> bool:
     status = getattr(getattr(exc, "response", None), "status_code", None)
     if status in (429, 500, 502, 503, 504):
         return True
-    return exc.__class__.__name__ in ("ConnectionError", "Timeout", "ConnectTimeout", "ReadTimeout")
+    # PyIceberg converts a catalog 429 into TooManyRequestsError, which
+    # carries no .response — classify by type/message or it reads as
+    # permanent and one rate-limit burst kills the whole publish.
+    if exc.__class__.__name__ in ("TooManyRequestsError", "TooManyRequestsException",
+                                  "ConnectionError", "Timeout", "ConnectTimeout", "ReadTimeout"):
+        return True
+    msg = str(exc).lower()
+    return "429" in msg or "too many requests" in msg or "rate limit" in msg
 
 
 def with_retries(fn, *, attempts: int = 4, base_delay: float = 5.0, label: str = "catalog write"):
