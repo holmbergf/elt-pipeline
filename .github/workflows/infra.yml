@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: hashicorp/setup-terraform@v3
       - name: fmt + validate (no state in CI by design)
         working-directory: infra
@@ -53,7 +53,7 @@ jobs:
         with:
           trigger: ".deploy"
           environment: production
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: steps.branch-deploy.outputs.continue == 'true'
         with:
           ref: ${{ steps.branch-deploy.outputs.branch }}
