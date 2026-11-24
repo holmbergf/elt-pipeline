@@ -5,7 +5,8 @@ from elt_ingest.jobs_cfb import _cfb_settings
 from elt_ingest.config import Settings
 
 
-def _event(home_rank=99, away_rank=5, completed=True, hs="31", aws="17"):
+def _event(home_rank=99, away_rank=5, completed=True, hs="31", aws="17",
+           home_name="Home U", away_name="Away State"):
     def comp(side, name, abbr, rank, score):
         return {
             "homeAway": side,
@@ -22,8 +23,8 @@ def _event(home_rank=99, away_rank=5, completed=True, hs="31", aws="17"):
         "competitions": [
             {
                 "competitors": [
-                    comp("home", "Home U", "HMU", home_rank, hs),
-                    comp("away", "Away State", "AWS", away_rank, aws),
+                    comp("home", home_name, "HMU", home_rank, hs),
+                    comp("away", away_name, "AWS", away_rank, aws),
                 ]
             }
         ],
@@ -39,6 +40,17 @@ def test_parse_ranks_and_scores():
     assert r["is_ranked_away"] and not r["is_ranked_home"]
     assert not r["is_top25_matchup"]
     assert r["home_score"] == 31 and r["winner"] == "Home U"
+
+
+def test_parse_skips_tbd_placeholder_fixtures():
+    # Conference-championship slot before both teams are known: one side is
+    # a TBD placeholder with a bare name on the other side. Ingesting it
+    # orphaned fct_ncaaf_games vs dim_ncaaf_teams in dbt.
+    ev = _event(home_name="TBD", away_name="Utah", completed=False, hs="", aws="")
+    ev["competitions"][0]["competitors"][0]["team"]["abbreviation"] = "TBD"
+    assert parse_espn_events({"events": [ev]}, 2026) == []
+    ev2 = _event(home_name="Utah Utes", away_name="TBD", completed=False, hs="", aws="")
+    assert parse_espn_events({"events": [ev2]}, 2026) == []
 
 
 def test_parse_unplayed_has_no_scores():

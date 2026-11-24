@@ -41,6 +41,16 @@ def parse_espn_events(payload: dict, season: int) -> list[dict]:
         if "home" not in by_side or "away" not in by_side:
             continue
         home, away = by_side["home"], by_side["away"]
+        # ESPN lists conference-championship / bowl slots before both teams
+        # are known: one side is a TBD placeholder (and the known side may
+        # carry a bare name like "Utah"). The same event id later resolves
+        # to the real matchup — skip placeholders entirely.
+        names = {str(home["team"].get("displayName", "")).strip().upper(),
+                 str(away["team"].get("displayName", "")).strip().upper()}
+        abbrs = {str(home["team"].get("abbreviation", "")).strip().upper(),
+                 str(away["team"].get("abbreviation", "")).strip().upper()}
+        if "TBD" in names or "TBD" in abbrs:
+            continue
         completed = bool((ev.get("status", {}).get("type") or {}).get("completed"))
         def score(c):
             return int(c["score"]) if completed and str(c.get("score", "")).isdigit() else None

@@ -6,7 +6,10 @@
 -- ESPN names are canonical (no mapping needed). Raw is append-only, so
 -- dedupe to one row per game, preferring the scored version. The boxscore
 -- (ESPN event id) dedupe runs first: it collapses legacy UTC-dated rows
--- with their Eastern-dated corrections for the same event.
+-- with their Eastern-dated corrections for the same event. Placeholder
+-- fixtures (conference-championship / bowl slots with a TBD opponent)
+-- are dropped: they are not games, and their bare team names break the
+-- team-dimension relationship.
 with by_event as (
     select
         *,
@@ -15,6 +18,7 @@ with by_event as (
             order by timestamp_imported desc
         ) as ern
     from {{ ref('stg_ncaaf_games') }}
+    where upper(trim(home_team)) != 'TBD' and upper(trim(away_team)) != 'TBD'
 ),
 
 deduped as (
