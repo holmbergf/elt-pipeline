@@ -6,8 +6,7 @@ pages; each reads its own bucket's published exports. It presents
 statistics and market data for users to make their own decisions — it
 does not recommend bets.
 
-**Live board:** <!-- TODO: replace with the deployed Streamlit app URL -->
-_deploy the app (below) and link its URL here._
+**Live board:** https://dzzheeqfpuy774nutwccl2.streamlit.app/
 
 Pages:
 

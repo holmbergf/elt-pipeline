@@ -15,7 +15,7 @@ The **Matchup Board** — upcoming NFL/NCAAF matchups with lines, market
 consensus, team form, trends, and consensus-band history — is a
 Streamlit app in [`dashboard/`](dashboard/):
 
-**▶ [Open the live board](https://YOUR-APP.streamlit.app)** <!-- TODO: replace with the deployed Streamlit app URL -->
+**▶ [Open the live board](https://dzzheeqfpuy774nutwccl2.streamlit.app/)**
 
 To run or deploy your own copy (it reads the published warehouse
 exports with a read-only R2 token), see
