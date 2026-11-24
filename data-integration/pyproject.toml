@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "elt-ingest"
 version = "0.1.0"
-description = "NFL ingestion for elt-pipeline: nflverse games + Covers markets, Parquet in R2, Basin Catalog Iceberg tables"
+description = "NFL + NCAAF ingestion for elt-pipeline: nflverse/ESPN games + Covers markets, Parquet in R2, Basin Catalog Iceberg tables"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

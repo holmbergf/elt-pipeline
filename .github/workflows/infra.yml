@@ -68,6 +68,17 @@ jobs:
             echo "::error::TF_STATE_BACKEND_CONFIG repo variable is not set. Configure a remote Terraform backend (R2/S3) before using .deploy; refusing to apply against empty runner-local state."
             exit 1
           fi
+      - name: Render backend config
+        # backend.hcl is gitignored (account-specific endpoint); render it
+        # from the committed template with this repo's account ID.
+        if: steps.branch-deploy.outputs.continue == 'true'
+        working-directory: infra
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+        run: |
+          if [ ! -f backend.hcl ]; then
+            sed "s|<account-id>|$R2_ACCOUNT_ID|" backend.hcl.example > backend.hcl
+          fi
       - name: Terraform init
         if: steps.branch-deploy.outputs.continue == 'true'
         working-directory: infra

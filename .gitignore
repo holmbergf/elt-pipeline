@@ -40,3 +40,6 @@ Thumbs.db
 # Streamlit secrets
 .streamlit/secrets.toml
 dashboard/.streamlit/secrets.toml
+
+# Terraform backend with account-specific endpoint (use .example template)
+infra/backend.hcl

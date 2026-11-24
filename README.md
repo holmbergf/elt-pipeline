@@ -1,8 +1,25 @@
 # elt-pipeline
 
+[![ingest](https://github.com/holmbergf/elt-pipeline/actions/workflows/ingest.yml/badge.svg)](https://github.com/holmbergf/elt-pipeline/actions/workflows/ingest.yml)
+[![ci/data-integration](https://github.com/holmbergf/elt-pipeline/actions/workflows/data-integration.yml/badge.svg)](https://github.com/holmbergf/elt-pipeline/actions/workflows/data-integration.yml)
+[![ci/dbt](https://github.com/holmbergf/elt-pipeline/actions/workflows/dbt.yml/badge.svg)](https://github.com/holmbergf/elt-pipeline/actions/workflows/dbt.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 Cloudflare-based ELT pipeline for NFL and NCAAF data: ingest games and betting
 markets, land them in R2, model them with dbt, and serve analytics from Apache
 Iceberg tables in Basin Catalog.
+
+## Live dashboard
+
+The **Matchup Board** — upcoming NFL/NCAAF matchups with lines, market
+consensus, team form, trends, and consensus-band history — is a
+Streamlit app in [`dashboard/`](dashboard/):
+
+**▶ [Open the live board](https://YOUR-APP.streamlit.app)** <!-- TODO: replace with the deployed Streamlit app URL -->
+
+To run or deploy your own copy (it reads the published warehouse
+exports with a read-only R2 token), see
+[dashboard/README.md](dashboard/README.md).
 
 Production entry point is GitHub Actions — the pipeline runs autonomously on
 schedule (see [Autonomous operation](#autonomous-operation)).
@@ -60,13 +77,14 @@ Covers NCAAF consensus┤  elt-ingest ─► └─ Iceberg nfl.raw_nfl_* / ncaa
   the Covers-code → ESPN-name mapping lives in
   `seeds/ncaaf_team_mappings.csv`. Published to the `ncaaf` Basin Catalog
   with `publish_warehouse --sport=ncaaf`.
-- **Dashboard** ([`dashboard/`](dashboard/)): password-gated Streamlit app
-  with an NFL and an NCAAF section (sidebar sport switcher, same pages:
+- **Dashboard** ([`dashboard/`](dashboard/)): Streamlit app with an NFL
+  and an NCAAF section (sidebar sport switcher, same pages:
   Upcoming/next slate with a historical-games view, Team Form, Trends,
-  Consensus). It reads the published `data_warehouse/` Parquet exports from
-  both buckets with a read-only R2 token (see
-  [dashboard/README.md](dashboard/README.md)). Deployed on Streamlit
-  Community Cloud from the standalone export (`dashboard/export_standalone.sh`).
+  Consensus). It reads the published `data_warehouse/` Parquet exports
+  from both buckets with a read-only R2 token (see
+  [dashboard/README.md](dashboard/README.md)). Public read-only by
+  default (optional `app_password` gate); deployed on Streamlit
+  Community Cloud directly from this repository.
 
 ## Repository structure
 
@@ -99,7 +117,10 @@ Workflows are path-filtered and independent: a dbt-only change runs only
 
 Terraform applies happen via the branch-deploy flow (`.deploy` on a PR,
 production environment). State is remote (S3 backend on R2, bucket
-`elt-tfstate`, config in `infra/backend.hcl`); the repo variable
+`elt-tfstate`); the backend config is account-specific, so only the
+template `infra/backend.hcl.example` is committed — copy it to
+`infra/backend.hcl` locally (the deploy job renders it from the
+template with the repo's account ID). The repo variable
 `TF_STATE_BACKEND_CONFIG` points the deploy job at it, and the job
 refuses to apply against an empty runner-local state if it is unset.
 
@@ -164,3 +185,19 @@ names are identical. See [`.env.example`](.env.example) for the full list.
 - The dashboard's Upcoming page filters the silver upcoming fixtures to the
   current Pacific date at read time (next slate shown when idle), so it
   never displays a stale build-day game as "today".
+- "Today" is timezone-sensitive throughout: game dates are US Eastern
+  sports dates, the warehouse keeps fixtures by the Eastern date (CI
+  builds run in UTC, where the date rolls over at 19:00 ET), and the
+  dashboard filters by Pacific date when the page loads.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Security reports:
+[SECURITY.md](SECURITY.md) (please don't open public issues for
+vulnerabilities).
+
+## License
+
+[MIT](LICENSE). Game and market data are provided by their respective
+sources (nflverse, ESPN, Covers) under their own terms; this license
+covers the code in this repository, not the upstream data.

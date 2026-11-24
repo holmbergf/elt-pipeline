@@ -1,8 +1,8 @@
 terraform {
   required_version = ">= 1.5.0"
 
-  # Remote state in R2 via the S3 backend; concrete settings live in
-  # backend.hcl (terraform init -backend-config=backend.hcl).
+  # Remote state in R2 via the S3 backend; copy backend.hcl.example to
+  # backend.hcl first (terraform init -backend-config=backend.hcl).
   backend "s3" {}
 
   required_providers {

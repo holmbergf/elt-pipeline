@@ -154,6 +154,30 @@ def test_game_axis_uses_integer_ticks():
     assert axis["type"] == "ordinal" and axis["field"] == "game"
 
 
+def test_require_password_optional_for_public_board():
+    # Exec only require_password (importing the app runs Streamlit). With no
+    # app_password secret the board is public read-only; with one set, an
+    # already-authenticated session passes the gate.
+    src = open(os.path.join(os.path.dirname(__file__), "..", "streamlit_app.py")).read()
+
+    class FakeSt:
+        def __init__(self, secrets, session):
+            self.secrets, self.session_state, self.errors = secrets, session, []
+
+        def error(self, msg):
+            self.errors.append(msg)
+
+    def gate(secrets, session):
+        ns = {"st": FakeSt(secrets, session)}
+        exec(src[src.index("def require_password") : src.index("def pct")], ns)
+        return ns["require_password"](), ns["st"].errors
+
+    ok, errors = gate({}, {})
+    assert ok is True and errors == []
+    ok, _ = gate({"app_password": "pw"}, {"authed": True})
+    assert ok is True
+
+
 def test_pair_colors_distinguishes_similar_blues():
     # Exec only the pure color helpers from the app (importing the app runs Streamlit).
     src = open(os.path.join(os.path.dirname(__file__), "..", "streamlit_app.py")).read()

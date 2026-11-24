@@ -543,8 +543,10 @@ Terraform in `infra/` is the only provisioning path (R2 buckets, Basin
 Catalogs). Applies go through the branch-deploy flow against the
 production environment. State is remote: an S3 backend on R2 itself
 (bucket `elt-tfstate`, key `elt-pipeline/infra/terraform.tfstate`,
-native lockfile enabled; settings in `infra/backend.hcl`, credentials
-from the R2 keys). The state bucket is the one resource Terraform
+native lockfile enabled; settings in `infra/backend.hcl` — gitignored
+because the endpoint embeds the account ID, rendered from the
+committed `backend.hcl.example` template — credentials from the R2
+keys). The state bucket is the one resource Terraform
 cannot create with remote state already in place, so it is provisioned
 by the tiny `infra/bootstrap/` module, applied once by hand with its
 own local state. The repo variable `TF_STATE_BACKEND_CONFIG=backend.hcl`
@@ -569,10 +571,11 @@ locally (`.env`, never committed) and in GitHub Actions secrets:
 
 ### 9.1 What it is
 
-A private, password-gated Streamlit app (`dashboard/`) presenting the
-semantic layer for human decision support — trends, form, and market
-context, with no bet recommendations (a deliberate product constraint:
-the app informs the user's own decisions). A sidebar sport switcher
+A Streamlit app (`dashboard/`) presenting the semantic layer for
+human decision support — trends, form, and market context, with no bet
+recommendations (a deliberate product constraint: the app informs the
+user's own decisions). It is public and read-only by default; setting
+`app_password` in the app's secrets optionally gates it. A sidebar sport switcher
 gives NFL and NCAAF identical sections (Upcoming, Team Form, Trends,
 Consensus) over their own buckets.
 
@@ -591,13 +594,14 @@ exactly as fresh as the Iceberg ones (published in the same step, §7).
 The Iceberg tables remain the contract for engine-based consumers
 (Basin SQL, Spark, notebooks); the Parquet zone is the file contract
 for the app. Both are published atomically enough for a batch pipeline
-that updates a few times a week, and app data is cached for an hour.
+that updates a few times a week. App data is cached for an hour, keyed
+on a warehouse version stamp re-probed every minute, so a fresh
+publish busts the cache within ~60s instead of lingering up to an hour
+behind (§9.3 records the stale-record bug that set this rule).
 
-Deployment: the app is exported to a standalone public repo
-(`dashboard/export_standalone.sh`) because the main repo is private and
-Streamlit's OAuth grant cannot be scoped to it; the app itself is
-protected by a shared password, and the standalone repo contains no
-secrets (real keys live only in Streamlit's secret store).
+Deployment: the app deploys on Streamlit Community Cloud directly
+from this repository (main file `dashboard/streamlit_app.py`); real
+keys live only in Streamlit's secret store, and the token is read-only.
 
 ### 9.3 Read-time semantics (two bugs that set the rules)
 
@@ -611,6 +615,11 @@ secrets (real keys live only in Streamlit's secret store).
   renders any played game (season → date → game pickers) from semantic
   results + settled market context, defaulting back to today/next slate
   on entry.
+- **Cached data is keyed on the published warehouse version.** A plain
+  hour-long TTL once let a long-lived app instance serve pre-publish
+  team records after the warehouse had moved on; loaders now hash a
+  content stamp (form + results row counts, re-probed every 60s) into
+  the cache key, so any publish busts the cache within a minute.
 
 ## 10. Technology choices
 
@@ -688,5 +697,7 @@ models plus overwrite publishing make re-transformation converge.
   failure is visible in the workflow).
 - **Full-refresh dbt** and overwrite publishing are sized for today's
   volume; §6.6 names the trigger to revisit them.
-- The dashboard uses a shared password (not per-user auth), appropriate
-  for a private single-user tool on the free tier.
+- The dashboard's optional access control is a single shared password
+  (not per-user auth). The board is read-only over published summary
+  data, so running it open on the free tier is also reasonable; the
+  read-only R2 token is the real security boundary.

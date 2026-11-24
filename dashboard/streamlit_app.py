@@ -1,7 +1,9 @@
-"""Matchup Board — NFL + NCAAF decision-support dashboard (private).
+"""Matchup Board — NFL + NCAAF decision-support dashboard.
 
 Presents statistics and market data from the elt-pipeline semantic layer
 for users to make their own decisions. It does not recommend bets.
+Set `app_password` in Streamlit secrets to gate access; without it the
+board is public and read-only.
 """
 
 from __future__ import annotations
@@ -63,14 +65,16 @@ def color(team: str) -> str:
 
 
 def require_password() -> bool:
+    # The password is optional: with no app_password secret the board is
+    # public read-only (data comes from a read-only R2 token server-side).
+    # Set app_password in Streamlit secrets to require it.
     expected = ""
     try:
         expected = str(st.secrets.get("app_password", ""))
     except Exception:
         pass
     if not expected:
-        st.error("App password is not configured in Streamlit secrets.")
-        return False
+        return True
     if st.session_state.get("authed"):
         return True
     _, mid, _ = st.columns([1, 1.2, 1])

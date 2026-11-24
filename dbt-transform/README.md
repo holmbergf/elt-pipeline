@@ -1,4 +1,8 @@
-# dbt-transform — NFL warehouse layer
+# dbt-transform — warehouse layer (NFL + NCAAF)
+
+Both sports run the same layer structure in their own bucket/catalog;
+this sketch shows NFL names (NCAAF mirrors them under
+`models/connector/ncaaf/` with `ncaaf` names, plus AP-rank columns).
 
 Raw (Basin Catalog, bucket `nfl`, `ingestion/` zone)
   `nfl.raw_nfl_games` (nflverse) · `nfl.raw_nfl_spreads` / `nfl.raw_nfl_totals` (Covers)
@@ -11,9 +15,10 @@ Silver staging: clean_nfl_games / clean_nfl_spreads / clean_nfl_totals
 Gold: analytics_nfl_team_rankings, analytics_nfl_team_betting_stats,
       analytics_nfl_upcoming_matchups
 Semantic (human surface, views): semantic_team_season_form,
-      semantic_game_results, semantic_upcoming_matchups — fractions 0-1
-      at 2dp, integer W/L/T, *_points spreads/lines. Streamlit should
-      read the `semantic` namespace, not gold.
+      semantic_game_results, semantic_upcoming_matchups, and the
+      consensus/line band tables — fractions 0-1 at 2dp, integer W/L/T,
+      *_points spreads/lines. Streamlit reads the semantic exports plus
+      the silver upcoming/settled fixtures (see dashboard/README.md).
 
 ## Storage layout (bucket `nfl`, provisioned by ../infra Terraform)
 
@@ -21,8 +26,8 @@ Semantic (human surface, views): semantic_team_season_form,
 |---|---|
 | `ingestion/raw/nfl/…` | Partitioned raw Parquet (content-addressed, idempotent) |
 | `ingestion/_manifests/…` | Ingestion run manifests — the watermark/state store |
-| `__r2_data_catalog/…` | Catalog-managed Iceberg data (raw `nfl.*`, warehouse `silver.*`, `gold.*`) |
-| `data_warehouse/{silver,gold}/*.parquet` | Parquet exports of every published warehouse model |
+| `__r2_data_catalog/…` | Catalog-managed Iceberg data (raw `nfl.*`, warehouse `silver.*`, `gold.*`, `semantic.*`) |
+| `data_warehouse/{silver,gold,semantic}/*.parquet` | Parquet exports of every published warehouse model |
 
 ## Write-path decision (spike, 2026-11-04)
 
@@ -35,8 +40,9 @@ Semantic (human surface, views): semantic_team_season_form,
   under `data_warehouse/`.
 
 Chosen path: dbt builds silver/gold in DuckDB → `elt_ingest.publish_warehouse`
-overwrites the `silver`/`gold` Iceberg tables (PyIceberg) and exports Parquet
-to `data_warehouse/{silver,gold}/`. Bronze stays views over raw.
+overwrites the `silver`/`gold`/`semantic` Iceberg tables (PyIceberg) and
+exports Parquet to `data_warehouse/{silver,gold,semantic}/`. Bronze stays
+views over raw.
 
 ## Run
 
@@ -49,6 +55,7 @@ dbt build --profiles-dir .
 dbt seed --target prod --profiles-dir .
 dbt build --target prod --profiles-dir .
 python -m elt_ingest.publish_warehouse warehouse.duckdb
+python -m elt_ingest.publish_warehouse warehouse.duckdb --sport=ncaaf
 ```
 
 Tests: `_schema.yml` (unique/not_null/relationships), source freshness
@@ -59,7 +66,8 @@ exceeds ~10 minutes.
 
 ## CI
 
-`ci/dbt` (path-filtered to `dbt-transform/**`) runs a slim build
-(`state:modified+` against the production manifest from the latest
-`ingest` run, full-build fallback) plus all data tests, against the
-10-row mock raw fixtures in `tests/fixtures/`.
+`ci/dbt` (path-filtered to `dbt-transform/**`) runs a full seed +
+build plus all data tests against the 10-row mock raw fixtures in
+`tests/fixtures/`; the slim selection vs the production manifest from
+the latest `ingest` run is computed and reported informationally (the
+ephemeral CI DuckDB has no prod schema to build slim against).

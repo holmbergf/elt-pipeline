@@ -44,6 +44,7 @@ This directory contains Terraform definitions for provisioning Cloudflare infras
    created once by the bootstrap module):
    ```bash
    terraform -chdir=bootstrap init && terraform -chdir=bootstrap apply  # once only
+   cp backend.hcl.example backend.hcl   # replace <account-id> (gitignored)
    export AWS_ACCESS_KEY_ID=<R2_ACCESS_KEY_ID> AWS_SECRET_ACCESS_KEY=<R2_SECRET_ACCESS_KEY>
    terraform init -backend-config=backend.hcl
    ```
