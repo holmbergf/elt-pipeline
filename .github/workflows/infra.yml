@@ -49,7 +49,7 @@ jobs:
     steps:
       - name: Branch deploy check
         id: branch-deploy
-        uses: github/branch-deploy@v10
+        uses: github/branch-deploy@v12
         with:
           trigger: ".deploy"
           environment: production
