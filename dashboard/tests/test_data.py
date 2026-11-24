@@ -154,6 +154,15 @@ def test_game_axis_uses_integer_ticks():
     assert axis["type"] == "ordinal" and axis["field"] == "game"
 
 
+def test_queries_use_per_call_cursors():
+    # The cached DuckDB connection is shared across sessions/reruns; a
+    # second query while one is in flight raises ResourceInUseException
+    # ("connection is busy ... use a separate connection from cursor()").
+    src = open(os.path.join(os.path.dirname(__file__), "..", "data.py")).read()
+    assert "_con().execute" not in src
+    assert src.count("_con().cursor().execute") >= 3
+
+
 def test_require_password_optional_for_public_board():
     # Exec only require_password (importing the app runs Streamlit). With no
     # app_password secret the board is public read-only; with one set, an
