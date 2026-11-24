@@ -83,8 +83,10 @@ Covers NCAAF consensus┤  elt-ingest ─► └─ Iceberg nfl.raw_nfl_* / ncaa
   Consensus). It reads the published `data_warehouse/` Parquet exports
   from both buckets with a read-only R2 token (see
   [dashboard/README.md](dashboard/README.md)). Public read-only by
-  default (optional `app_password` gate); deployed on Streamlit
-  Community Cloud directly from this repository.
+  default (optional `app_password` gate); the live board deploys on
+  Streamlit Community Cloud from the standalone export
+  ([fholmberg/nfl-dashboard](https://github.com/fholmberg/nfl-dashboard),
+  refreshed via `dashboard/export_standalone.sh`).
 
 ## Repository structure
 

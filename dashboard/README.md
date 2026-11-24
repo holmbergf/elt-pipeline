@@ -39,12 +39,23 @@ set `app_password` in the app's secrets; see
 
 ## Deploy (Streamlit Community Cloud, free tier)
 
-1. share.streamlit.io → New app → this repository, branch `main`,
-   main file `dashboard/streamlit_app.py`.
-2. In the app's Settings → Secrets, paste the keys from
-   `.streamlit/secrets.toml.example` with real values. The app deploys
-   directly from this repo; pushes to `main` redeploy automatically.
-3. Add the resulting app URL above (and as the GitHub repo homepage).
+The live board deploys from the standalone export repo
+([fholmberg/nfl-dashboard](https://github.com/fholmberg/nfl-dashboard),
+app at its root), **not** from this repository — pushes here do not
+redeploy it. To ship a dashboard change to the live board:
+
+```bash
+./dashboard/export_standalone.sh /path/to/nfl-dashboard-checkout
+cd /path/to/nfl-dashboard-checkout && git add -A && git commit -m "..." && git push
+```
+
+Streamlit Cloud then redeploys automatically (or use Manage app →
+Reboot app). In the app's Settings → Secrets, paste the keys from
+`.streamlit/secrets.toml.example` with real values.
+
+For your own deployment you can equally point Streamlit Cloud at this
+repository directly (branch `main`, main file
+`dashboard/streamlit_app.py`) and skip the standalone export.
 
 ## Local run
 

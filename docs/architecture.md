@@ -599,9 +599,12 @@ on a warehouse version stamp re-probed every minute, so a fresh
 publish busts the cache within ~60s instead of lingering up to an hour
 behind (§9.3 records the stale-record bug that set this rule).
 
-Deployment: the app deploys on Streamlit Community Cloud directly
-from this repository (main file `dashboard/streamlit_app.py`); real
-keys live only in Streamlit's secret store, and the token is read-only.
+Deployment: the live app deploys on Streamlit Community Cloud from a
+standalone export repo (`fholmberg/nfl-dashboard`, app at its root,
+refreshed by `dashboard/export_standalone.sh`) — pushes to this repo
+do not redeploy it, a drift that once left the live board serving a
+weeks-old build while this repo raced ahead. Real keys live only in
+Streamlit's secret store, and the token is read-only.
 
 ### 9.3 Read-time semantics (two bugs that set the rules)
 
