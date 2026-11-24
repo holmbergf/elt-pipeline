@@ -106,14 +106,14 @@ jobs:
           dbt build --target prod --profiles-dir .
           python -m elt_ingest.publish_warehouse warehouse.duckdb
           python -m elt_ingest.publish_warehouse warehouse.duckdb --sport=ncaaf
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: dbt-run-results
           path: dbt-transform/target/run_results.json
           if-no-files-found: ignore
       # Prod manifest consumed by ci/dbt slim selection (state:modified+)
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: success()
         with:
           name: dbt-state
