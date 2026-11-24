@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
       - name: fmt + validate (no state in CI by design)
         working-directory: infra
         run: |
@@ -57,7 +57,7 @@ jobs:
         if: steps.branch-deploy.outputs.continue == 'true'
         with:
           ref: ${{ steps.branch-deploy.outputs.branch }}
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         if: steps.branch-deploy.outputs.continue == 'true'
       - name: Require remote state backend
         if: steps.branch-deploy.outputs.continue == 'true'
