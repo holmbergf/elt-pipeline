@@ -61,6 +61,25 @@ def test_load_busts_cache_when_warehouse_version_changes(mirror, tmp_path):
     assert len(mirror.load("form")) == 2
 
 
+def test_load_busts_cache_when_only_lines_land(mirror, tmp_path):
+    # A lines-only publish (spreads arrive for an already-listed fixture)
+    # changes neither form nor results row counts; the stamp must still
+    # move via upcoming line coverage or the board serves "no consensus"
+    # for up to an hour after the lines published.
+    base = tmp_path / "data_warehouse"
+    pd.DataFrame({"x": [1]}).to_parquet(base / "semantic" / "semantic_game_results.parquet", index=False)
+    (base / "silver").mkdir(parents=True, exist_ok=True)
+    up = base / "silver" / "fct_nfl_betting_upcoming.parquet"
+    pd.DataFrame({"game_date": ["2026-11-25"], "home_spread": [float("nan")],
+                  "over_under_line": [float("nan")]}).to_parquet(up, index=False)
+    mirror.clear_caches()
+    assert mirror.load("upcoming_all")["home_spread"].isna().all()
+    pd.DataFrame({"game_date": ["2026-11-25"], "home_spread": [-2.5], "over_under_line": [47.5]}).to_parquet(up, index=False)
+    mirror._warehouse_version.clear()  # simulate the 60s probe expiring
+    refreshed = mirror.load("upcoming_all")
+    assert refreshed.iloc[0]["home_spread"] == -2.5
+
+
 def test_load_failure_surfaces_sanitized_error(mirror, monkeypatch):
     monkeypatch.setenv("LOCAL_WAREHOUSE_DIR", "/nonexistent-dir")
     mirror.clear_caches()
