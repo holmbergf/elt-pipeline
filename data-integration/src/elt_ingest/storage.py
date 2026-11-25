@@ -217,13 +217,20 @@ class StateStore:
             dates.update(d for d in (m.get("covered_dates") or []) if written >= d)
         return dates
 
-    def missing_dates(self, dataset: str, since_days: int | None = None) -> list[str]:
-        """Game dates with no spreads/totals manifest yet (newest first)."""
+    def missing_dates(self, dataset: str, since_days: int | None = None, ahead_days: int = 0) -> list[str]:
+        """Game dates with no spreads/totals manifest yet (newest first).
+
+        ahead_days extends the window into the near future so the next
+        slate has lines/consensus before game day (Covers publishes
+        ahead). An early scrape cannot strand a date: covered_dates only
+        counts manifests written on/after the date, so it is re-scraped
+        (refreshed) on game day and settles then."""
         dates = self.game_dates()
         if since_days is not None and dates:
             # Anchor at today, not the max game date: the schedule includes future fixtures.
             today = pd.Timestamp.now(tz="UTC").strftime("%Y-%m-%d")
             cutoff = (pd.Timestamp(today) - pd.Timedelta(days=since_days)).strftime("%Y-%m-%d")
-            dates = [d for d in dates if cutoff <= d <= today]
+            upper = (pd.Timestamp(today) + pd.Timedelta(days=ahead_days)).strftime("%Y-%m-%d")
+            dates = [d for d in dates if cutoff <= d <= upper]
         covered = self.covered_dates(dataset)
         return sorted((d for d in dates if d not in covered), reverse=True)

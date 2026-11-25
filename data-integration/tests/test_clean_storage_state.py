@@ -46,6 +46,25 @@ def test_write_is_partitioned_idempotent_and_stateful(tmp_path):
     assert state.missing_dates("spreads") == ["2025-01-05"]
 
 
+def test_missing_dates_includes_near_future_with_ahead_days(tmp_path):
+    # The dashboard shows the next slate before game day, so incremental
+    # market scrapes must look ahead: a game 3 days out is fetched with
+    # ahead_days=7 (lines appear early), a game 10 days out is not, and
+    # without ahead_days nothing future is fetched (old behaviour).
+    storage = LocalStorage(tmp_path)
+    today = pd.Timestamp.now(tz="UTC").normalize()
+    near = (today + pd.Timedelta(days=3)).strftime("%Y-%m-%d")
+    far = (today + pd.Timedelta(days=10)).strftime("%Y-%m-%d")
+    games = pd.DataFrame([
+        {"matchup": "NFL A B", "date": near, "event_date": near},
+        {"matchup": "NFL C D", "date": far, "event_date": far},
+    ])
+    write_dataset(storage, games, "games", source="test")
+    state = StateStore(storage)
+    assert state.missing_dates("spreads", since_days=14) == []
+    assert state.missing_dates("spreads", since_days=14, ahead_days=7) == [near]
+
+
 def test_early_partial_scrape_does_not_cover_future_date(tmp_path):
     # Covers pages bleed neighbouring dates: a Nov 6 scrape claiming
     # Nov 14 (partial page) must not mark Nov 14 covered; a scrape made

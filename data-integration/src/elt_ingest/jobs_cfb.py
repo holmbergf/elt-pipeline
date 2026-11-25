@@ -61,7 +61,7 @@ async def _run_market(dataset: str, scrape_fn, settings, mode: str, batch_size: 
     if mode == "backfill":
         dates = state.missing_dates(dataset)
     else:
-        dates = state.missing_dates(dataset, since_days=21)
+        dates = state.missing_dates(dataset, since_days=21, ahead_days=7)
     if not dates:
         log.info("no ncaaf %s dates to fetch (run games first?)", dataset)
         return WriteResult(dataset=dataset)
