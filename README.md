@@ -1,5 +1,6 @@
 # elt-pipeline
 
+[![ci](https://github.com/holmbergf/elt-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/holmbergf/elt-pipeline/actions/workflows/ci.yml)
 [![ingest](https://github.com/holmbergf/elt-pipeline/actions/workflows/ingest.yml/badge.svg)](https://github.com/holmbergf/elt-pipeline/actions/workflows/ingest.yml)
 [![ci/data-integration](https://github.com/holmbergf/elt-pipeline/actions/workflows/data-integration.yml/badge.svg)](https://github.com/holmbergf/elt-pipeline/actions/workflows/data-integration.yml)
 [![ci/dbt](https://github.com/holmbergf/elt-pipeline/actions/workflows/dbt.yml/badge.svg)](https://github.com/holmbergf/elt-pipeline/actions/workflows/dbt.yml)
