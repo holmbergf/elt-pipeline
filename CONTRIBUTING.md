@@ -34,8 +34,15 @@ test under `dbt-transform/`.
 
 - One concern per PR; describe what broke or changed and how you verified
   it (tests run, dbt build, manual check).
-- CI is path-filtered: ingestion changes run `ci/data-integration`, dbt
-  changes run `ci/dbt`, `infra/` changes run `ci/infra` (fmt + validate).
+- CI: an always-on `ci` workflow (`tests`) runs on every PR; the
+  per-module workflows are path-filtered (ingestion changes run
+  `ci/data-integration`, dbt changes run `ci/dbt`, `infra/` changes run
+  `ci/infra` fmt + validate).
+- `main` is protected in the public repo: non-maintainer changes land
+  via PR with the `tests` check green, an approval, and conversations
+  resolved; force pushes and deletion are blocked. Maintainers apply
+  the settings with `scripts/protect-main.sh` (GitHub only allows
+  branch protection once the repo is public or on a Pro plan).
 - Never commit credentials, `.env` files, Terraform state or variables
   with real values, or exported warehouse data. Use the `*.example`
   templates. If you think you committed a secret, say so in the PR —
